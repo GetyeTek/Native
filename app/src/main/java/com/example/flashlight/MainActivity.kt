@@ -11,27 +11,33 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Create a simple button layout
         val button = ToggleButton(this).apply {
-            textOn = "Flashlight is ON"
-            textOff = "Flashlight is OFF"
+            textOn = "Flashlight ON"
+            textOff = "Flashlight OFF"
+            textSize = 24f
         }
         setContentView(button)
 
+        // Get the Camera Manager
         val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        
+
         button.setOnCheckedChangeListener { _, isChecked ->
             try {
-                // Get the first camera ID (usually the back camera)
+                // Find the rear camera (usually ID "0")
                 val cameraId = cameraManager.cameraIdList.getOrNull(0)
+                
                 if (cameraId != null) {
                     cameraManager.setTorchMode(cameraId, isChecked)
                 } else {
-                    Toast.makeText(this, "No camera found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "No flash found!", Toast.LENGTH_SHORT).show()
+                    button.isChecked = false
                 }
             } catch (e: Exception) {
-                // This catches the error instead of crashing the app
+                // If permission is denied or camera is broken, show message instead of crashing
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 e.printStackTrace()
+                button.isChecked = false
             }
         }
     }
