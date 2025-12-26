@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- Permissions to use the Flashlight -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-feature android:name="android.hardware.camera.flash" />
 
-    <!-- Added 'android:theme' to fix the crash -->
     <application 
-        android:label="GitHub Flashlight"
+        android:label="DNS Guard & Flash"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         
         <activity android:name=".MainActivity" android:exported="true">
