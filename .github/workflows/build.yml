@@ -1,13 +1,24 @@
 name: Build Android APK
+
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - setup-java: {java-version: '17', distribution: 'temurin'}
-      - run: chmod +x gradlew || true
-      - run: ./gradlew assembleDebug || npx android-build-setup && ./gradlew assembleDebug
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Gradle
+        # We use 'gradle' instead of './gradlew' because the wrapper file is missing
+        run: gradle assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
