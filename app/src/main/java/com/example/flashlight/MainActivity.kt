@@ -1,3 +1,9 @@
+Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+    // This will catch ANY crash and show the error message in a Toast before closing
+    runOnUiThread {
+        Toast.makeText(this, "CRASH: ${throwable.message}", Toast.LENGTH_LONG).show()
+    }
+}
 package com.example.flashlight
 
 import android.content.Context
