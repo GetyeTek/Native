@@ -1,6 +1,8 @@
 name: Build Android APK
 
-on: [push]
+on: 
+  push:
+  workflow_dispatch: # This adds the manual "Run" button
 
 jobs:
   build:
