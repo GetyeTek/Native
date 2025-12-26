@@ -1,24 +1,23 @@
 name: Build Android APK
 
-on: 
-  push:
-  workflow_dispatch: # This adds the manual "Run" button
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build with Gradle
-        # We use 'gradle' instead of './gradlew' because the wrapper file is missing
+      # STEP 1: Run the tests
+      - name: Run Unit Tests
+        run: gradle testDebugUnitTest
+
+      # STEP 2: Only build if tests passed
+      - name: Build APK
         run: gradle assembleDebug
 
       - name: Upload APK
