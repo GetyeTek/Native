@@ -19,7 +19,7 @@ jobs:
       # STEP 1: Run the tests
       # COMBINED STEP: Run Analysis, Tests, and Build in one efficient pass
       - name: Run Checks & Build
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug
+        run: gradle lintDebug testDebugUnitTest assembleDebug
 
       # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
