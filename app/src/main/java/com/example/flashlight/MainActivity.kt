@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Setup global crash catcher so you never fly blind again
+        // 1. Setup global crash catcher [Checkpoint: Pre-DNS Logic Update]
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             runOnUiThread {
                 Toast.makeText(this, "Fatal: ${throwable.message}", Toast.LENGTH_LONG).show()
