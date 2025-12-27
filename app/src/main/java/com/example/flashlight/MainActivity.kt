@@ -2,8 +2,6 @@ package com.example.flashlight
 
 import android.content.Context
 import android.graphics.Color
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
@@ -13,7 +11,7 @@ import android.os.Bundle
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ToggleButton
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -46,18 +44,18 @@ class MainActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER
         }
 
-        val flashButton = ToggleButton(this).apply {
-            textOn = "Flashlight ON"
-            textOff = "Flashlight OFF"
+        val bannerText = TextView(this).apply {
+            text = "⚠️ SET YOUR DNS IMMEDIATELY ⚠️"
             textSize = 24f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.RED)
+            gravity = android.view.Gravity.CENTER
+            setPadding(40, 40, 40, 40)
+            visibility = View.GONE
         }
 
         layout.addView(statusText)
-        layout.addView(flashButton)
+        layout.addView(bannerText)
         setContentView(layout)
 
         // 3. DNS Monitoring Logic
@@ -67,10 +65,20 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                // Connected: Wait for link properties
+            }
+
+            override fun onLost(network: Network) {
+                runOnUiThread {
+                    statusText.text = "Waiting for connection..."
+                    statusText.setTextColor(Color.GRAY)
+                    bannerText.visibility = View.GONE
+                }
+            }
+
             override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) {
                 val dnsServers = lp.dnsServers.map { it.hostAddress }
-                
-                // Check for CleanBrowsing via Private DNS name or IP range
                 val isSafe = lp.privateDnsServerName?.contains("cleanbrowsing") == true || 
                              dnsServers.any { it?.contains(TARGET_DNS_IP_PART) == true }
 
@@ -78,40 +86,15 @@ class MainActivity : AppCompatActivity() {
                     if (isSafe) {
                         statusText.text = "✅ DNS SECURE\nFamily Filter Active"
                         statusText.setTextColor(Color.GREEN)
+                        bannerText.visibility = View.GONE
                     } else {
                         statusText.text = "⚠️ DNS BREACH!\nFilter Inactive"
                         statusText.setTextColor(Color.RED)
+                        bannerText.visibility = View.VISIBLE
                     }
                 }
             }
         }
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-
-        // 4. Working Flashlight Logic
-        val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        flashButton.setOnCheckedChangeListener { _, isChecked ->
-            try {
-                val list = cameraManager.cameraIdList
-                var flashId: String? = null
-
-                for (id in list) {
-                    val chars = cameraManager.getCameraCharacteristics(id)
-                    if (chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true) {
-                        flashId = id
-                        break
-                    }
-                }
-
-                if (flashId != null) {
-                    cameraManager.setTorchMode(flashId, isChecked)
-                } else {
-                    Toast.makeText(this, "No flash unit found!", Toast.LENGTH_SHORT).show()
-                    flashButton.isChecked = false
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                flashButton.isChecked = false
-            }
-        }
     }
 }
