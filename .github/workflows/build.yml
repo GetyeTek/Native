@@ -1,9 +1,6 @@
 name: Build Android APK
 
 on: 
-  push:
-    branches:
-      - conduit-dev
   workflow_dispatch:
 
 jobs:
