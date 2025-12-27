@@ -17,21 +17,17 @@ jobs:
           distribution: 'temurin'
 
       # STEP 1: Run the tests
-      - name: Run Unit Tests
-        run: gradle testDebugUnitTest
+      # COMBINED STEP: Run Analysis, Tests, and Build in one efficient pass
+      - name: Run Checks & Build
+        run: ./gradlew lintDebug testDebugUnitTest assembleDebug
 
-      # STEP 2: Upload the Error Report (Runs even if tests fail)
+      # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
         if: always() 
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: app/build/reports/tests/testDebugUnitTest/
-
-      # STEP 3: Build APK (Only runs if tests passed)
-      - name: Build APK
-        run: gradle assembleDebug
-
+          path: app/build/reports/
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
