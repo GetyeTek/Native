@@ -1,7 +1,6 @@
 name: Build Android APK
 
 on: 
-  push:
   workflow_dispatch:
   repository_dispatch:
     types: [conduit_build_trigger]
