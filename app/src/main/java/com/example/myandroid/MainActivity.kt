@@ -15,6 +15,13 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.util.DisplayMetrics
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Force Dark Theme colors programmatically for this 'Hacker' vibe
@@ -50,9 +57,12 @@ class MainActivity : AppCompatActivity() {
         // 4. Link Tabs
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> "📱 Device"
-                1 -> "⚡ Power"
-                2 -> "💾 Storage"
+                0 -> "🤖 OS"
+                1 -> "⚙️ Hard"
+                2 -> "🖥️ Disp"
+                3 -> "📡 Net"
+                4 -> "🧭 Sens"
+                5 -> "✨ Feat"
                 else -> "Info"
             }
         }.attach()
@@ -60,7 +70,7 @@ class MainActivity : AppCompatActivity() {
 
     // --- ADAPTER ---
     class InfoPagerAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
-        override fun getItemCount(): Int = 3
+        override fun getItemCount(): Int = 6
         override fun createFragment(position: Int): Fragment = InfoFragment.newInstance(position)
     }
 
@@ -87,9 +97,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             val data = when (pos) {
-                0 -> getDeviceInfo()
-                1 -> getPowerInfo(context)
-                2 -> getStorageInfo(context)
+                0 -> getOsInfo()
+                1 -> getHardwareInfo(context)
+                2 -> getDisplayInfo(context)
+                3 -> getNetworkInfo(context)
+                4 -> getSensorInfo(context)
+                5 -> getFeatureInfo(context)
                 else -> emptyMap()
             }
 
@@ -130,49 +143,113 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        private fun getDeviceInfo(): Map<String, String> = mapOf(
-            "MODEL" to Build.MODEL,
-            "MANUFACTURER" to Build.MANUFACTURER.uppercase(),
-            "ANDROID VERSION" to Build.VERSION.RELEASE,
-            "SDK" to Build.VERSION.SDK_INT.toString(),
-            "BOARD" to Build.BOARD,
-            "BOOTLOADER" to Build.BOOTLOADER
+        private fun getOsInfo(): Map<String, String> = mapOf(
+            "ANDROID VER" to Build.VERSION.RELEASE,
+            "SDK API" to Build.VERSION.SDK_INT.toString(),
+            "SECURITY PATCH" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Build.VERSION.SECURITY_PATCH else "Unknown"),
+            "KERNEL" to System.getProperty("os.version").toString(),
+            "BUILD ID" to Build.ID,
+            "BOOTLOADER" to Build.BOOTLOADER,
+            "FINGERPRINT" to Build.FINGERPRINT.take(20) + "...",
+            "BUILD HOST" to Build.HOST,
+            "BUILD USER" to Build.USER,
+            "BUILD TIME" to java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(java.util.Date(Build.TIME))
         )
 
-        private fun getPowerInfo(ctx: android.content.Context): Map<String, String> {
-            val batteryStatus = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
-            val level = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
-            val pct = if(level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
-            val status = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
-            val isCharging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING || status == android.os.BatteryManager.BATTERY_STATUS_FULL
+        private fun getHardwareInfo(ctx: Context): Map<String, String> {
+            // Battery
+            val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+            val level = batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0
+            val volt = batt?.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
+            val temp = batt?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             
-            return mapOf(
-                "BATTERY LEVEL" to "$pct%",
-                "STATUS" to if(isCharging) "⚡ Charging" else "🔋 Discharging",
-                "HEALTH" to "Good (Sensors Hidden)",
-                "VOLTAGE" to "${(batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) ?: 0)} mV"
-            )
-        }
-
-        private fun getStorageInfo(ctx: android.content.Context): Map<String, String> {
-            val actManager = ctx.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            // RAM
+            val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             val memInfo = android.app.ActivityManager.MemoryInfo()
             actManager.getMemoryInfo(memInfo)
             
-            val totalRam = memInfo.totalMem / (1024 * 1024)
-            val availRam = memInfo.availMem / (1024 * 1024)
+            // CPU
+            val cores = Runtime.getRuntime().availableProcessors()
             
-            val dataDir = android.os.Environment.getDataDirectory()
-            val stat = android.os.StatFs(dataDir.path)
-            val totalStorage = (stat.blockCountLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
-            val freeStorage = (stat.availableBlocksLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
-
             return mapOf(
-                "RAM USAGE" to "${totalRam - availRam} MB / $totalRam MB",
-                "RAM FREE" to "$availRam MB",
-                "INTERNAL STORAGE" to "$totalStorage GB Total",
-                "FREE SPACE" to "$freeStorage GB Available"
+                "MANUFACTURER" to Build.MANUFACTURER.uppercase(),
+                "MODEL" to Build.MODEL,
+                "PRODUCT" to Build.PRODUCT,
+                "BOARD" to Build.BOARD,
+                "CPU CORES" to "$cores Cores",
+                "SUPPORTED ABIS" to Build.SUPPORTED_ABIS.joinToString(", "),
+                "RAM TOTAL" to "${memInfo.totalMem / (1024*1024)} MB",
+                "RAM AVAIL" to "${memInfo.availMem / (1024*1024)} MB",
+                "BATTERY LEVEL" to "$level%",
+                "VOLTAGE" to "$volt mV",
+                "TEMP" to "${temp/10.0} °C"
+            )
+        }
+
+        private fun getDisplayInfo(ctx: Context): Map<String, String> {
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+            val dm = DisplayMetrics()
+            wm.defaultDisplay.getRealMetrics(dm)
+            val refresh = wm.defaultDisplay.refreshRate
+            val hdr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && wm.defaultDisplay.isHdr) "Yes" else "No"
+            
+            return mapOf(
+                "RESOLUTION" to "${dm.widthPixels} x ${dm.heightPixels}",
+                "DPI (DENSITY)" to "${dm.densityDpi} dpi",
+                "REFRESH RATE" to "${refresh.toInt()} Hz",
+                "SCALE FACTOR" to "${dm.density}x",
+                "HDR SUPPORT" to hdr,
+                "ORIENTATION" to if (ctx.resources.configuration.orientation == 1) "Portrait" else "Landscape"
+            )
+        }
+
+        private fun getNetworkInfo(ctx: Context): Map<String, String> {
+            val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val net = cm.activeNetwork
+            val caps = cm.getNetworkCapabilities(net)
+            val link = cm.getLinkProperties(net)
+            
+            val transport = when {
+                caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> "WiFi"
+                caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "Cellular Data"
+                caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> "Ethernet"
+                caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true -> "VPN"
+                else -> "No Connection"
+            }
+            
+            return mapOf(
+                "STATUS" to if(net != null) "Connected" else "Disconnected",
+                "TYPE" to transport,
+                "DOWN SPEED" to "${(caps?.linkDownstreamBandwidthKbps ?: 0) / 1000} Mbps",
+                "UP SPEED" to "${(caps?.linkUpstreamBandwidthKbps ?: 0) / 1000} Mbps",
+                "METERED" to if(caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) == false) "Yes" else "No",
+                "LOCAL IP" to (link?.linkAddresses?.firstOrNull()?.address?.hostAddress ?: "Unknown")
+            )
+        }
+
+        private fun getSensorInfo(ctx: Context): Map<String, String> {
+            val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            val list = sm.getSensorList(Sensor.TYPE_ALL)
+            val map = mutableMapOf<String, String>()
+            
+            map["TOTAL SENSORS"] = "${list.size} Found"
+            list.take(15).forEachIndexed { i, s ->
+                map["#${i+1} ${s.name}"] = "Vendor: ${s.vendor}\nPower: ${s.power} mA"
+            }
+            return map
+        }
+
+        private fun getFeatureInfo(ctx: Context): Map<String, String> {
+            val pm = ctx.packageManager
+            return mapOf(
+                "NFC" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_NFC).toString(),
+                "BLUETOOTH LE" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH_LE).toString(),
+                "WIFI DIRECT" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_DIRECT).toString(),
+                "USB HOST" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST).toString(),
+                "FINGERPRINT" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_FINGERPRINT).toString(),
+                "FACE RECOG" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_FACE).toString(),
+                "VR MODE" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_VR_MODE_HIGH_PERFORMANCE).toString(),
+                "PIP" to pm.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE).toString()
             )
         }
     }
