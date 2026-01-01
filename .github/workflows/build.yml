@@ -1,12 +1,17 @@
 name: Build Android APK
 
 on: 
+  push:
   workflow_dispatch:
-
+  repository_dispatch:
+    types: [conduit_build_trigger]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Log Build Context
+        if: github.event.client_payload
+        run: echo "Build triggered for version ${{ github.event.client_payload.version }}"
       - name: Checkout code
         uses: actions/checkout@v4
 
