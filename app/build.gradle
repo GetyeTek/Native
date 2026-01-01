@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.flashlight'
+    namespace 'com.example.myandroid'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.flashlight"
+        applicationId "com.example.myandroid"
         minSdk 24
         targetSdk 34
         versionCode 1
