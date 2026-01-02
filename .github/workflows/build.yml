@@ -25,6 +25,10 @@ jobs:
       - name: Run Checks & Build
         run: gradle lintDebug testDebugUnitTest assembleDebug
 
+      - name: View Lint Errors
+        if: failure()
+        run: cat app/build/reports/lint-results-debug.txt
+
       # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
         if: always() 
