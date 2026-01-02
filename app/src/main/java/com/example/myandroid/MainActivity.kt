@@ -24,6 +24,12 @@ import java.util.Calendar
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
+import org.json.JSONArray
+import android.os.Handler
+import android.os.Looper
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -467,9 +473,43 @@ class ToolsFragment : Fragment() {
             setPadding(40, 60, 40, 250)
         }
 
-        content.addView(createHeader(ctx, "Sys", "tem", "TOOLS & PROTECTION"))
+        content.addView(createHeader(ctx, "Sys", "tem", "TOOLS & CLOUD"))
 
-        // --- ADMIN PROTECTION CARD ---
+        // --- 1. CLOUD BACKUP CARD ---
+        val cloudCard = createGlassContainer(ctx).apply {
+             setPadding(40, 40, 40, 40)
+             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+        }
+        val cloudHeader = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        cloudHeader.addView(TextView(ctx).apply {
+            text = "SUPABASE CLOUD"; textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        cloudHeader.addView(TextView(ctx).apply {
+            text = "READY"; textSize=11f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD
+        })
+        cloudCard.addView(cloudHeader)
+        
+        cloudCard.addView(TextView(ctx).apply {
+            text = "Sync usage metrics and SMS logs to your remote database."; textSize=13f; setTextColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+        })
+        
+        val syncBtn = TextView(ctx).apply {
+            text = "UPLOAD DATA ☁️"; textSize=12f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD
+            background = GradientDrawable().apply { setColor(0xFF7F5AF0.toInt()); cornerRadius=50f }
+            gravity = Gravity.CENTER
+            setPadding(0, 30, 0, 30)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 30 }
+            setOnClickListener {
+                text = "UPLOADING..."
+                performCloudBackup(ctx, this)
+            }
+        }
+        cloudCard.addView(syncBtn)
+        content.addView(cloudCard)
+
+        // --- 2. ADMIN PROTECTION CARD ---
         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val adminComp = ComponentName(ctx, MyDeviceAdminReceiver::class.java)
         val isAdmin = dpm.isAdminActive(adminComp)
@@ -747,6 +787,78 @@ class StatsFragment : Fragment() {
         val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(millis) % 60
         return "${hours}h ${mins}m"
     }
+}
+
+// ==========================================
+// CLOUD LOGIC
+// ==========================================
+fun performCloudBackup(ctx: Context, btn: TextView) {
+    Thread {
+        try {
+            // 1. GATHER DATA
+            val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+            val level = batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0
+            
+            val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+            val smsCount = prefs.getInt("sms_count", 0)
+            
+            val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+            val calendar = Calendar.getInstance()
+            val endTime = calendar.timeInMillis
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            val startTime = calendar.timeInMillis
+            val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
+            val totalTimeMillis = stats.sumOf { it.totalTimeInForeground }
+            val totalMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(totalTimeMillis)
+
+            // 2. PREPARE JSON
+            val json = JSONObject()
+            json.put("device_model", android.os.Build.MODEL)
+            json.put("battery_level", level)
+            json.put("sms_count", smsCount)
+            json.put("screen_time_minutes", totalMins)
+            json.put("android_version", android.os.Build.VERSION.RELEASE)
+            
+            // Attach the actual SMS logs
+            val rawLogs = prefs.getString("sms_logs_cache", "[]")
+            json.put("sms_logs", JSONArray(rawLogs))
+
+            // 3. SEND TO SUPABASE
+            val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats"
+            val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+
+            val url = URL(supabaseUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("apikey", supabaseKey)
+            conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+
+            val os = conn.outputStream
+            os.write(json.toString().toByteArray())
+            os.flush()
+            os.close()
+
+            val code = conn.responseCode
+            
+            Handler(Looper.getMainLooper()).post {
+                if (code == 201) {
+                    btn.text = "UPLOAD SUCCESS ✅"
+                    btn.background.setTint(0xFF2CB67D.toInt())
+                } else {
+                     btn.text = "FAILED: $code ❌"
+                     btn.background.setTint(0xFFEF4565.toInt())
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Handler(Looper.getMainLooper()).post {
+                 btn.text = "ERROR: ${e.message}"
+                 btn.background.setTint(0xFFEF4565.toInt())
+            }
+        }
+    }.start()
 }
 
 // ==========================================
