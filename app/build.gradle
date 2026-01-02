@@ -30,6 +30,12 @@ android {
         jvmTarget = '17'
     }
 
+    lint {
+        // Forces lint to print errors to the console (stdout)
+        textReport true
+        textOutput 'stdout'
+    }
+
     // --- NEW SECTION: This makes logs detailed ---
     testOptions {
         unitTests.all {
