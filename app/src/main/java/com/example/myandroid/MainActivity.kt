@@ -520,7 +520,8 @@ class StatsFragment : Fragment() {
                 text = "PERMISSION REQUIRED"; textSize = 12f; setTextColor(0xFFEF4565.toInt()); typeface = Typeface.DEFAULT_BOLD
             })
             permCard.addView(TextView(ctx).apply {
-                text = "To visualize your app usage metrics, system access is required."; textSize = 14f; setTextColor(Color.WHITE); topMargin = 20
+                text = "To visualize your app usage metrics, system access is required."; textSize = 14f; setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
             })
             
             // Button
@@ -553,7 +554,8 @@ class StatsFragment : Fragment() {
                 }
                 totalCard.addView(TextView(ctx).apply { text="SCREEN TIME TODAY"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
                 totalCard.addView(TextView(ctx).apply { 
-                    text=formatDuration(totalTime); textSize=36f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD; topMargin=10 
+                    text=formatDuration(totalTime); textSize=36f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
                 })
                 content.addView(totalCard)
 
