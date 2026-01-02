@@ -17,6 +17,8 @@ import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.provider.Settings
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import java.util.Calendar
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -461,20 +463,66 @@ class ToolsFragment : Fragment() {
             setPadding(40, 60, 40, 250)
         }
 
-        content.addView(createHeader(ctx, "Sen", "sors", "MATRIX"))
+        content.addView(createHeader(ctx, "Sys", "tem", "TOOLS & PROTECTION"))
 
+        // --- ADMIN PROTECTION CARD ---
+        val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val adminComp = ComponentName(ctx, MyDeviceAdminReceiver::class.java)
+        val isAdmin = dpm.isAdminActive(adminComp)
+
+        val adminCard = createGlassContainer(ctx).apply {
+            setPadding(40, 40, 40, 40)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 40 }
+        }
+        
+        val header = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        header.addView(TextView(ctx).apply {
+            text = "UNINSTALL SHIELD"; textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        header.addView(TextView(ctx).apply {
+            text = if(isAdmin) "ACTIVE" else "INACTIVE"; textSize=11f; setTextColor(if(isAdmin) 0xFF2CB67D.toInt() else 0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD
+        })
+        adminCard.addView(header)
+
+        if (!isAdmin) {
+            adminCard.addView(TextView(ctx).apply {
+                text = "Grant admin privileges to prevent accidental uninstallation."; textSize=13f; setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "ACTIVATE SHIELD"; textSize=12f; setTextColor(Color.BLACK); typeface=Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB1BC.toInt()); cornerRadius=50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 30 }
+                setOnClickListener {
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComp)
+                    intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Activate to prevent accidental uninstall.")
+                    startActivity(intent)
+                }
+            }
+            adminCard.addView(btn)
+        } else {
+             adminCard.addView(TextView(ctx).apply {
+                text = "App is protected. To uninstall, you must disable this shield first."; textSize=13f; setTextColor(0xFF2CB67D.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+            })
+        }
+        content.addView(adminCard)
+
+        // --- SENSORS LIST ---
+        content.addView(TextView(ctx).apply { text="SENSOR MATRIX"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
         val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val list = sm.getSensorList(Sensor.TYPE_ALL)
 
-        // Create Grid manually with rows of 2
         var currentRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; weightSum=2f }
-        
         list.forEachIndexed { index, s ->
             if (index % 2 == 0 && index > 0) {
                 content.addView(currentRow)
                 currentRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; weightSum=2f; layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=20 } }
             }
-            
             val item = createGlassContainer(ctx).apply {
                 setPadding(20, 20, 20, 20)
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
@@ -487,7 +535,7 @@ class ToolsFragment : Fragment() {
             })
             item.addView(TextView(ctx).apply { 
                 text = "${s.power} mA"; textSize=9f; setTextColor(0xFF94A1B2.toInt())
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 5 }
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=5 }
             })
             currentRow.addView(item)
         }
