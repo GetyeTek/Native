@@ -100,7 +100,10 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomNav)
         setContentView(root)
 
-        // Schedule Background Sync (Auto-runs when internet is connected)
+        // 1. Force Immediate Rule Fetch (Fixes fresh install delay)
+        CloudManager.fetchRules(this)
+
+        // 2. Schedule Background Sync (Auto-runs when internet is connected)
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
             .build()
