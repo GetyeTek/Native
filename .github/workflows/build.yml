@@ -27,7 +27,7 @@ jobs:
 
       # MODIFIED: Build Only (Skipped Lint for Speed)
       - name: Build APK
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
