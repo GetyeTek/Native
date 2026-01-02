@@ -259,7 +259,9 @@ class DashboardFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(0, 380, 1f).apply { marginStart = 10 } // Fixed height to match RAM roughly
         }
         cpuCard.addView(TextView(ctx).apply {
-            text = Build.SOC_MODEL.uppercase(); textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD
+            // Safe check for Android 12+
+            val soc = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) android.os.Build.SOC_MODEL else android.os.Build.BOARD
+            text = soc.uppercase(); textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD
         })
         val barContainer = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM; layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -521,7 +523,8 @@ fun createHeader(ctx: Context, t1: String, t2: String, sub: String): View {
         text = "$t1 $t2"
         textSize = 32f
         setTextColor(Color.WHITE)
-        typeface = Typeface.create(Typeface.DEFAULT, 900) // Black weight
+        // Use "sans-serif-black" for extra bold weight on all API levels
+        typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
     }
     layout.addView(pill)
     layout.addView(title)
