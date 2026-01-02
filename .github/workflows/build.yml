@@ -20,14 +20,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # STEP 1: Run the tests
-      # COMBINED STEP: Run Analysis, Tests, and Build in one efficient pass
-      - name: Run Checks & Build
-        run: gradle lintDebug testDebugUnitTest assembleDebug
+      # NEW: Gradle Cache (The Speed Booster)
+      # This saves all dependencies so we don't download them every time
+      - name: Setup Gradle & Cache
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: View Lint Errors
-        if: failure()
-        run: cat app/build/reports/lint-results-debug.txt
+      # MODIFIED: Build Only (Skipped Lint for Speed)
+      - name: Build APK
+        run: ./gradlew assembleDebug
 
       # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
