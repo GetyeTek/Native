@@ -91,7 +91,11 @@ class MainActivity : AppCompatActivity() {
             background = GradientDrawable().apply {
                 setColor(0xCC141414.toInt())
                 cornerRadius = 100f
-                setStroke(2, 0x33FFFFFF.toInt())
+                setStroke(2, COLOR_BORDER)
+            }
+            // Glass Blur for Dock
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                setRenderEffect(android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR))
             }
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 160).apply {
                 gravity = Gravity.BOTTOM
@@ -100,7 +104,7 @@ class MainActivity : AppCompatActivity() {
             elevation = 20f
         }
 
-        val tabs = listOf("📊" to "DASH", "⚙️" to "SPECS", "🌍" to "NET", "🧩" to "TOOLS")
+        val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "🛠️" to "TOOLS")
         tabs.forEachIndexed { index, (icon, label) ->
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -115,13 +119,13 @@ class MainActivity : AppCompatActivity() {
             val tvIcon = TextView(this).apply {
                 text = icon
                 textSize = 20f
-                setTextColor(COLOR_TEXT_MUTED)
+                setTextColor(COLOR_TEXT_SUB)
             }
             val tvLabel = TextView(this).apply {
                 text = label
                 textSize = 9f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(COLOR_TEXT_MUTED)
+                setTextColor(COLOR_TEXT_SUB)
                 setPadding(0, 5, 0, 0)
             }
 
