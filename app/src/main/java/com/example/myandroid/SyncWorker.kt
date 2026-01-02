@@ -71,7 +71,31 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
 
             val code = conn.responseCode
+            
+            // 4. DOWNLINK: Fetch Rules from Cloud if Upload Succeeded
             if (code in 200..299) {
+                try {
+                    val rulesUrl = URL("https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/monitoring_rules?select=*")
+                    val rulesConn = rulesUrl.openConnection() as HttpURLConnection
+                    rulesConn.requestMethod = "GET"
+                    rulesConn.setRequestProperty("apikey", supabaseKey)
+                    rulesConn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                    
+                    val rulesJson = rulesConn.inputStream.bufferedReader().use { it.readText() }
+                    
+                    // Save rules locally for the Accessibility Service to read
+                    // We transform the Array [{},{}] into a Map {"pkg": {rule}} for faster lookup
+                    val rulesArray = JSONArray(rulesJson)
+                    val rulesMap = JSONObject()
+                    for (i in 0 until rulesArray.length()) {
+                        val item = rulesArray.getJSONObject(i)
+                        rulesMap.put(item.getString("package_name"), item)
+                    }
+                    prefs.edit().putString("cached_rules", rulesMap.toString()).apply()
+                    
+                } catch (e: Exception) {
+                    e.printStackTrace() // Non-fatal, keep using old rules
+                }
                 return Result.success()
             } else {
                 return Result.retry()
@@ -80,7 +104,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             e.printStackTrace()
             return Result.retry()
         } finally {
-            // 4. Remove Notification
+            // 5. Remove Notification
             notifManager.cancel(notifId)
         }
     }
