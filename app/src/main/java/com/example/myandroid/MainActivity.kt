@@ -1,7 +1,10 @@
 package com.example.myandroid
 
 import android.animation.ValueAnimator
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Color
@@ -13,6 +16,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.provider.Settings
+import java.util.Calendar
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -101,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             elevation = 20f
         }
 
-        val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "🛠️" to "TOOLS")
+        val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "🛠️" to "TOOLS", "📈" to "STATS")
         tabs.forEachIndexed { index, (icon, label) ->
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -155,12 +160,13 @@ class MainActivity : AppCompatActivity() {
 
     // --- PAGER ADAPTER ---
     inner class MainPagerAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
-        override fun getItemCount(): Int = 4
+        override fun getItemCount(): Int = 5
         override fun createFragment(position: Int): Fragment = when(position) {
             0 -> DashboardFragment()
             1 -> SpecsFragment()
             2 -> NetFragment()
             3 -> ToolsFragment()
+            4 -> StatsFragment()
             else -> DashboardFragment()
         }
     }
@@ -489,6 +495,148 @@ class ToolsFragment : Fragment() {
 
         scroll.addView(content)
         return scroll
+    }
+}
+
+// --- 5. STATS FRAGMENT ---
+class StatsFragment : Fragment() {
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val ctx = requireContext()
+        val scroll = ScrollView(ctx).apply { isFillViewport = true; background = null }
+        val content = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 60, 40, 250)
+        }
+
+        content.addView(createHeader(ctx, "Digital", "Habits", "USAGE STATISTICS"))
+
+        if (!hasPermission(ctx)) {
+            // PERMISSION DENIED STATE
+            val permCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            permCard.addView(TextView(ctx).apply {
+                text = "PERMISSION REQUIRED"; textSize = 12f; setTextColor(0xFFEF4565.toInt()); typeface = Typeface.DEFAULT_BOLD
+            })
+            permCard.addView(TextView(ctx).apply {
+                text = "To visualize your app usage metrics, system access is required."; textSize = 14f; setTextColor(Color.WHITE); topMargin = 20
+            })
+            
+            // Button
+            val btn = TextView(ctx).apply {
+                text = "GRANT ACCESS"; textSize = 12f; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB67D.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 40 }
+                setOnClickListener {
+                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+            }
+            permCard.addView(btn)
+            content.addView(permCard)
+        } else {
+            // SHOW STATS
+            val stats = getUsageStats(ctx)
+            if (stats.isEmpty()) {
+                content.addView(TextView(ctx).apply { text="No usage data available yet."; setTextColor(0xFF94A1B2.toInt()) })
+            } else {
+                val topApp = stats.first()
+                val maxTime = topApp.totalTimeInForeground
+                val totalTime = stats.sumOf { it.totalTimeInForeground }
+                
+                // 1. TOTAL TIME CARD
+                val totalCard = createGlassContainer(ctx).apply {
+                    setPadding(40, 40, 40, 40)
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+                }
+                totalCard.addView(TextView(ctx).apply { text="SCREEN TIME TODAY"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+                totalCard.addView(TextView(ctx).apply { 
+                    text=formatDuration(totalTime); textSize=36f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD; topMargin=10 
+                })
+                content.addView(totalCard)
+
+                // 2. APP LIST
+                content.addView(TextView(ctx).apply { text="TOP APPLICATIONS"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
+                
+                stats.take(5).forEachIndexed { index, usage ->
+                    val row = createGlassContainer(ctx).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        setPadding(30, 25, 30, 25)
+                        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 15 }
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    
+                    // Rank
+                    row.addView(TextView(ctx).apply {
+                        text = "#${index + 1}"; textSize=12f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE
+                        layoutParams = LinearLayout.LayoutParams(80, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    })
+
+                    // Info
+                    val info = LinearLayout(ctx).apply {
+                        orientation = LinearLayout.VERTICAL
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+                    val appName = try {
+                         ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(usage.packageName, 0)).toString()
+                    } catch (e: Exception) { usage.packageName }
+                    
+                    info.addView(TextView(ctx).apply { text=appName; textSize=13f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD })
+                    
+                    // Bar
+                    val barBg = android.widget.FrameLayout(ctx).apply {
+                        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6).apply { topMargin=10 }
+                        background = GradientDrawable().apply { setColor(0x33FFFFFF.toInt()); cornerRadius=10f }
+                    }
+                    val pct = (usage.totalTimeInForeground.toFloat() / maxTime.toFloat())
+                    val barFill = View(ctx).apply {
+                        layoutParams = android.widget.FrameLayout.LayoutParams((500 * pct).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+                        background = GradientDrawable().apply { setColor(0xFF7F5AF0.toInt()); cornerRadius=10f }
+                    }
+                    barBg.addView(barFill)
+                    info.addView(barBg)
+                    row.addView(info)
+
+                    // Time
+                    row.addView(TextView(ctx).apply {
+                        text = formatDuration(usage.totalTimeInForeground)
+                        textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.MONOSPACE; setPadding(20,0,0,0)
+                    })
+                    
+                    content.addView(row)
+                }
+            }
+        }
+
+        scroll.addView(content)
+        return scroll
+    }
+
+    private fun hasPermission(ctx: Context): Boolean {
+        val appOps = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName)
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun getUsageStats(ctx: Context): List<android.app.usage.UsageStats> {
+        val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val calendar = Calendar.getInstance()
+        val endTime = calendar.timeInMillis
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        val startTime = calendar.timeInMillis
+        
+        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
+        return stats.filter { it.totalTimeInForeground > 0 }.sortedByDescending { it.totalTimeInForeground }
+    }
+
+    private fun formatDuration(millis: Long): String {
+        val hours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(millis)
+        val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+        return "${hours}h ${mins}m"
     }
 }
 
