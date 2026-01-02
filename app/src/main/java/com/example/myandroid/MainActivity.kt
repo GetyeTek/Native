@@ -271,7 +271,8 @@ class DashboardFragment : Fragment() {
         }
         cpuCard.addView(barContainer)
         cpuCard.addView(TextView(ctx).apply {
-            text = "${Runtime.getRuntime().availableProcessors()} Cores"; textSize=11f; setTextColor(Color.WHITE); topMargin=15
+            text = "${Runtime.getRuntime().availableProcessors()} Cores"; textSize=11f; setTextColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 15 }
         })
         row.addView(cpuCard)
         content.addView(row)
@@ -331,7 +332,10 @@ class SpecsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginEnd = 10 }
         }
         dispCard.addView(TextView(ctx).apply { text="DISPLAY"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
-        dispCard.addView(TextView(ctx).apply { text="${dm.widthPixels}x${dm.heightPixels}"; textSize=14f; setTextColor(Color.WHITE); typeface=Typeface.MONOSPACE; topMargin=20 })
+        dispCard.addView(TextView(ctx).apply { 
+            text="${dm.widthPixels}x${dm.heightPixels}"; textSize=14f; setTextColor(Color.WHITE); typeface=Typeface.MONOSPACE
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+        })
         dispCard.addView(TextView(ctx).apply { text="${dm.densityDpi} DPI"; textSize=12f; setTextColor(0xFF2CB1BC.toInt()); typeface=Typeface.MONOSPACE })
         row.addView(dispCard)
 
@@ -341,7 +345,10 @@ class SpecsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = 10 }
         }
         devCard.addView(TextView(ctx).apply { text="DEVICE"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
-        devCard.addView(TextView(ctx).apply { text=Build.MODEL; textSize=14f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD; topMargin=20 })
+        devCard.addView(TextView(ctx).apply { 
+            text=Build.MODEL; textSize=14f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+        })
         devCard.addView(TextView(ctx).apply { text=Build.MANUFACTURER.uppercase(); textSize=12f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD })
         row.addView(devCard)
         content.addView(row)
@@ -415,7 +422,10 @@ class NetFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = 10 }
             }
             ipCard.addView(TextView(ctx).apply { text="LOCAL IP"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
-            ipCard.addView(TextView(ctx).apply { text=ip; textSize=13f; setTextColor(0xFF2CB1BC.toInt()); typeface=Typeface.MONOSPACE; topMargin=15 })
+            ipCard.addView(TextView(ctx).apply { 
+                text=ip; textSize=13f; setTextColor(0xFF2CB1BC.toInt()); typeface=Typeface.MONOSPACE
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 15 }
+            })
             row.addView(ipCard)
 
             // Speed Card
@@ -424,7 +434,10 @@ class NetFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = 10 }
             }
             speedCard.addView(TextView(ctx).apply { text="DOWNLINK"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
-            speedCard.addView(TextView(ctx).apply { text="$downSpeed Mbps"; textSize=13f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE; topMargin=15 })
+            speedCard.addView(TextView(ctx).apply { 
+                text="$downSpeed Mbps"; textSize=13f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 15 }
+            })
             row.addView(speedCard)
             content.addView(row)
         }
@@ -468,7 +481,8 @@ class ToolsFragment : Fragment() {
                 textSize=11f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD 
             })
             item.addView(TextView(ctx).apply { 
-                text = "${s.power} mA"; textSize=9f; setTextColor(0xFF94A1B2.toInt()); topMargin=5
+                text = "${s.power} mA"; textSize=9f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 5 }
             })
             currentRow.addView(item)
         }
