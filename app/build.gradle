@@ -31,10 +31,8 @@ android {
     }
 
     lint {
-        // This writes directly to the build log on Linux/Mac (GitHub Actions)
         textReport true
-        textOutput file("/dev/stdout")
-        explainIssues true
+        abortOnError true
     }
 
     // --- NEW SECTION: This makes logs detailed ---
