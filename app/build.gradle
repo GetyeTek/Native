@@ -31,9 +31,10 @@ android {
     }
 
     lint {
-        // Forces lint to print errors to the console (stdout)
+        // This writes directly to the build log on Linux/Mac (GitHub Actions)
         textReport true
-        textOutput 'stdout'
+        textOutput file("/dev/stdout")
+        explainIssues true
     }
 
     // --- NEW SECTION: This makes logs detailed ---
