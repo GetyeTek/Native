@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">My Android</string>
     <string name="admin_desc">Prevents accidental uninstallation of the System Monitor.</string>
+    <string name="accessibility_desc">Monitors on-screen text to calculate usage statistics and productivity metrics.</string>
 </resources>
