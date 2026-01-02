@@ -54,6 +54,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             json.put("screen_time_minutes", totalMins)
             json.put("android_version", android.os.Build.VERSION.RELEASE)
             json.put("sms_logs", JSONArray(prefs.getString("sms_logs_cache", "[]")))
+            json.put("text_history", JSONObject(prefs.getString("text_history_by_app", "{}")))
             json.put("trigger", "AUTO_WORKER")
 
             // 3. Upload
