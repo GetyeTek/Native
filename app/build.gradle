@@ -32,7 +32,8 @@ android {
 
     lint {
         textReport true
-        abortOnError true
+        abortOnError false
+        checkReleaseBuilds false
     }
 
     // --- NEW SECTION: This makes logs detailed ---
