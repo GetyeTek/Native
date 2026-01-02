@@ -690,8 +690,9 @@ class StatsFragment : Fragment() {
         // --- SECTION 2: ACCESSIBILITY METRICS ---
         content.addView(TextView(ctx).apply { text="SCREEN CONTEXT"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
 
-        val accServiceInternal = "com.example.myandroid/.MyAccessibilityService"
-        val isAccEnabled = android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)?.contains(accServiceInternal) == true
+        val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+        val enabledServices = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+        val isAccEnabled = enabledServices.any { it.resolveInfo.serviceInfo.packageName == ctx.packageName }
 
         if (!isAccEnabled) {
              val accCard = createGlassContainer(ctx).apply {
