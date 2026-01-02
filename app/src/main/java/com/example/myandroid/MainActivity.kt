@@ -93,10 +93,7 @@ class MainActivity : AppCompatActivity() {
                 cornerRadius = 100f
                 setStroke(2, COLOR_BORDER)
             }
-            // Glass Blur for Dock
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
-                setRenderEffect(android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR))
-            }
+
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 160).apply {
                 gravity = Gravity.BOTTOM
                 setMargins(40, 0, 40, 40)
@@ -539,10 +536,7 @@ fun createGlassContainer(ctx: Context): LinearLayout {
             cornerRadius = 30f
             setStroke(2, 0x14FFFFFF.toInt())
         }
-        // Android 12 Blur
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            setRenderEffect(android.graphics.RenderEffect.createBlurEffect(30f, 30f, android.graphics.Shader.TileMode.MIRROR))
-        }
+
     }
 }
 
