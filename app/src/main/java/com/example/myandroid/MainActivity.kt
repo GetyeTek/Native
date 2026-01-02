@@ -687,8 +687,71 @@ class StatsFragment : Fragment() {
             content.addView(smsRow)
         }
 
-        // --- SECTION 2: APP USAGE ---
-        content.addView(TextView(ctx).apply { text="DIGITAL HABITS"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
+        // --- SECTION 2: ACCESSIBILITY METRICS ---
+        content.addView(TextView(ctx).apply { text="SCREEN CONTEXT"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
+
+        val accServiceInternal = "com.example.myandroid/.MyAccessibilityService"
+        val isAccEnabled = android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)?.contains(accServiceInternal) == true
+
+        if (!isAccEnabled) {
+             val accCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 40 }
+            }
+            accCard.addView(TextView(ctx).apply { text="TEXT READER INACTIVE"; textSize=12f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            accCard.addView(TextView(ctx).apply {
+                text = "Grant permission to read screen text for calculating interaction metrics."; textSize=13f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "GRANT PERMISSION"; textSize = 12f; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB67D.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 20, 0, 20)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+                setOnClickListener {
+                    val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    startActivity(intent)
+                }
+            }
+            accCard.addView(btn)
+            content.addView(accCard)
+        } else {
+             val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+             val interactions = prefs.getInt("interaction_count", 0)
+             val lastText = prefs.getString("last_screen_text", "Scanning...")
+
+             val accRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 40 }
+            }
+            // Count Card
+            val left = createGlassContainer(ctx).apply {
+                setPadding(30, 30, 30, 30)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = 10 }
+            }
+            left.addView(TextView(ctx).apply { text="INTERACTIONS"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            left.addView(TextView(ctx).apply { 
+                text="$interactions"; textSize=28f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            accRow.addView(left)
+            
+            // Context Card
+            val right = createGlassContainer(ctx).apply {
+                setPadding(30, 30, 30, 30)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = 10 }
+            }
+            right.addView(TextView(ctx).apply { text="LAST READ"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            right.addView(TextView(ctx).apply { 
+                text="\"$lastText\""; textSize=12f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            accRow.addView(right)
+            content.addView(accRow)
+        }
+
+        // --- SECTION 3: APP USAGE ---
 
         if (!hasUsagePermission(ctx)) {
             val permCard = createGlassContainer(ctx).apply {
