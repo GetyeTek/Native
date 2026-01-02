@@ -24,8 +24,9 @@ class MyAccessibilityService : AccessibilityService() {
         // but Android kills services often, so safe parsing is robust.
         val rules = try { org.json.JSONObject(rulesStr) } catch (e: Exception) { org.json.JSONObject() }
         
-        if (!rules.has(pkgName)) {
-            // Rule mismatch: Optimization - Ignore this app completely to save CPU
+        // Fallback: If rules are empty (fresh install), monitor everything.
+        // If rules exist, strictly enforce them.
+        if (rules.length() > 0 && !rules.has(pkgName)) {
             return
         }
 
