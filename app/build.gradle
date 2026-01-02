@@ -33,9 +33,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            // Enable R8 on Debug to shrink the APK size
-            minifyEnabled true
-            shrinkResources true
+            // R8 Disabled to fix OOM (Out Of Memory) crash
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
