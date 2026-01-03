@@ -12,9 +12,23 @@ import java.io.File
 
 object DeviceManager {
 
+    fun getDeviceId(ctx: Context): String {
+        val prefs = ctx.getSharedPreferences("app_identity", Context.MODE_PRIVATE)
+        var id = prefs.getString("device_uuid", null)
+        if (id == null) {
+            id = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("device_uuid", id).apply()
+        }
+        return id!!
+    }
+
     fun getStaticInfo(ctx: Context): JSONObject {
+        val deviceId = getDeviceId(ctx)
         val json = JSONObject()
         try {
+            // 0. Identity
+            json.put("device_id", deviceId)
+            
             // 1. Software
             json.put("model", Build.MODEL)
             json.put("manufacturer", Build.MANUFACTURER)
