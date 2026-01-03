@@ -24,8 +24,9 @@
 
     <application
         android:allowBackup="true"
-        android:label="My Android"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="Cortex"
+        android:icon="@drawable/logo"
+        android:roundIcon="@drawable/logo"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         
