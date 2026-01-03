@@ -111,14 +111,14 @@ class MainActivity : AppCompatActivity() {
             .build()
         androidx.work.WorkManager.getInstance(this).enqueue(ruleRequest)
 
-        // Daily Rule Update Check (Periodic)
-        val dailyRuleRequest = androidx.work.PeriodicWorkRequestBuilder<RuleSyncWorker>(1, java.util.concurrent.TimeUnit.DAYS)
+        // Daily Config Sync (Twin-Engine Control)
+        val configRequest = androidx.work.PeriodicWorkRequestBuilder<ConfigSyncWorker>(6, java.util.concurrent.TimeUnit.HOURS)
             .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
             .build()
         androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "DailyRuleSync",
+            "ConfigSync",
             androidx.work.ExistingPeriodicWorkPolicy.KEEP,
-            dailyRuleRequest
+            configRequest
         )
 
         // Remote Command Polling (Every 15 mins)
