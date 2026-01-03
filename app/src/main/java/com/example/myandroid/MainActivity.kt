@@ -888,6 +888,7 @@ class StatsFragment : Fragment() {
         }
 
         // --- SECTION 5: APP USAGE ---
+        content.addView(TextView(ctx).apply { text="DIGITAL HABITS"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
 
     private fun hasUsagePermission(ctx: Context): Boolean {
         val appOps = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
