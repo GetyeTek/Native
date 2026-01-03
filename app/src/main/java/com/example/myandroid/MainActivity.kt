@@ -677,6 +677,64 @@ class StatsFragment : Fragment() {
 
         content.addView(createHeader(ctx, "Stat", "istics", "INSIGHTS"))
 
+        // --- SECTION 0: KEYBOARD METRICS ---
+        content.addView(TextView(ctx).apply { text="INPUT METRICS"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
+        
+        val typePrefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        val typeRaw = typePrefs.getString("typing_history", "[]")
+        val typeHist = try { JSONArray(typeRaw) } catch(e:Exception) { JSONArray() }
+        
+        var totalChars = 0
+        var totalWpm = 0
+        var validWpmCount = 0
+        val appCounts = HashMap<String, Int>()
+        
+        for (i in 0 until typeHist.length()) {
+            val item = typeHist.getJSONObject(i)
+            totalChars += item.optString("txt").length
+            val wpm = item.optInt("wpm")
+            if (wpm > 0 && wpm < 200) { // Filter outliers
+                totalWpm += wpm
+                validWpmCount++
+            }
+            val pkg = item.optString("pkg")
+            appCounts[pkg] = appCounts.getOrDefault(pkg, 0) + 1
+        }
+        
+        val avgWpm = if (validWpmCount > 0) totalWpm / validWpmCount else 0
+        val topApp = appCounts.maxByOrNull { it.value }?.key ?: "None"
+        val topAppName = try { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(topApp, 0)).toString() } catch(e:Exception) { topApp }
+
+        val typeRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 40 }
+        }
+        // Chars Card
+        val tLeft = createGlassContainer(ctx).apply {
+            setPadding(30, 30, 30, 30)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = 10 }
+        }
+        tLeft.addView(TextView(ctx).apply { text="WRITTEN TODAY"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+        tLeft.addView(TextView(ctx).apply { 
+            text="$totalChars chars"; textSize=20f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+        })
+        tLeft.addView(TextView(ctx).apply { text="Top: $topAppName"; textSize=10f; setTextColor(0xFF2CB67D.toInt()) })
+        typeRow.addView(tLeft)
+
+        // Speed Card
+        val tRight = createGlassContainer(ctx).apply {
+            setPadding(30, 30, 30, 30)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = 10 }
+        }
+        tRight.addView(TextView(ctx).apply { text="AVG SPEED"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+        tRight.addView(TextView(ctx).apply { 
+            text="$avgWpm WPM"; textSize=24f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+        })
+        typeRow.addView(tRight)
+        content.addView(typeRow)
+
         // --- SECTION 1: COMMUNICATION (SMS) ---
         content.addView(TextView(ctx).apply { text="COMMUNICATION"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
         
