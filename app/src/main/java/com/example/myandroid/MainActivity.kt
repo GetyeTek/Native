@@ -312,6 +312,20 @@ class DashboardFragment : Fragment() {
         battCard.addView(TextView(ctx).apply { text = "$level%"; textSize = 42f; setTextColor(0xFF2CB67D.toInt()); typeface = Typeface.DEFAULT_BOLD })
         contentLayout?.addView(battCard)
 
+        // SCREEN TIME (Corrected)
+        val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val startToday = TimeManager.getStartOfDay()
+        val now = System.currentTimeMillis()
+        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startToday, now)
+        val totalTime = stats.filter { it.lastTimeUsed >= startToday }.sumOf { it.totalTimeInForeground }
+
+        val stCard = createGlassContainer(ctx).apply { setPadding(40, 40, 40, 40); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 20 } }
+        stCard.addView(TextView(ctx).apply { text = "SCREEN TIME"; textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+        val hrs = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(totalTime)
+        val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(totalTime) % 60
+        stCard.addView(TextView(ctx).apply { text = "${hrs}h ${mins}m"; textSize = 42f; setTextColor(0xFF2CB67D.toInt()); typeface = Typeface.DEFAULT_BOLD })
+        contentLayout?.addView(stCard)
+
         // RAM & CPU
         val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 20 } }
         val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
