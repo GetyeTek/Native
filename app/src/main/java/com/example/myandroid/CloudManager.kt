@@ -15,9 +15,11 @@ object CloudManager {
     fun uploadData(ctx: Context, modules: List<String>, btn: TextView? = null) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                DebugLogger.log("Cloud", "Starting Upload. Modules: $modules")
+                
                 // Check Global Config before uploading
                 if (!ConfigManager.canUpload(ctx) && btn == null) {
-                    println("Upload blocked by Schedule/Config")
+                    DebugLogger.log("Cloud", "Upload BLOCKED by Schedule/Config")
                     return@launch
                 }
 
@@ -138,6 +140,8 @@ object CloudManager {
                 os.close()
 
                 val code = conn.responseCode
+                DebugLogger.log("Cloud", "Upload Finished. Code: $code")
+                if (code !in 200..299) DebugLogger.log("CloudError", "Failed to push data.")
                 
                 if (btn != null) {
                     withContext(Dispatchers.Main) {
@@ -184,7 +188,7 @@ object CloudManager {
 
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
                 val code = conn.responseCode
-                DebugLogger.log("Cloud", "Skeleton Upload Response: $code")
+                DebugLogger.log("Cloud", "Skeleton Upload ($code) - Size: ${json.toString().length} bytes")
 
                 if (code !in 200..299) {
                     // READ THE ERROR STREAM TO KNOW WHY 404 HAPPENED
