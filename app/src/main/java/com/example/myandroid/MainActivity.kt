@@ -181,8 +181,11 @@ class MainActivity : AppCompatActivity() {
                                 ghost.visibility = View.GONE
                             } else {
                                 ghost?.visibility = View.VISIBLE
+                                val report = DeviceManager.getDiagnosticReport(this@MainActivity)
+                                DebugLogger.log("DIAG", "Console Opened. Running Checks...")
+                                
                                 (ghost as? ScrollView)?.getChildAt(0)?.let { 
-                                    (it as TextView).text = DebugLogger.getLogs()
+                                    (it as TextView).text = report + "\n" + DebugLogger.getLogs()
                                 }
                             }
                         }
