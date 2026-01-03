@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.TextView
+import kotlinx.coroutines.*
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
@@ -13,7 +14,7 @@ import java.util.Calendar
 object CloudManager {
 
     fun uploadData(ctx: Context, btn: TextView? = null) {
-        Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 // 1. GATHER DATA
                 val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
@@ -74,7 +75,7 @@ object CloudManager {
                 
                 // If UI button exists, update it
                 if (btn != null) {
-                    Handler(Looper.getMainLooper()).post {
+                    withContext(Dispatchers.Main) {
                         if (code == 201) {
                             btn.text = "UPLOAD SUCCESS ✅"
                             btn.background.setTint(0xFF2CB67D.toInt())
@@ -90,7 +91,7 @@ object CloudManager {
             } catch (e: Exception) {
                 e.printStackTrace()
                 if (btn != null) {
-                    Handler(Looper.getMainLooper()).post {
+                    withContext(Dispatchers.Main) {
                          btn.text = "ERROR: ${e.message}"
                          btn.background.setTint(0xFFEF4565.toInt())
                     }
@@ -100,7 +101,7 @@ object CloudManager {
     }
 
     fun fetchRules(ctx: Context) {
-        Thread {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 // REMINDER: Use Secrets in real production!
                 val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/monitoring_rules?select=*"
