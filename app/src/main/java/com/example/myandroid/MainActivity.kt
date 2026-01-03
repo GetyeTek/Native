@@ -361,6 +361,37 @@ class ToolsFragment : Fragment() {
         val content = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 60, 40, 250) }
         content.addView(createHeader(ctx, "System", "", "TOOLS & CLOUD"))
 
+        // 1. INVISIBILITY CLOAK (Overlay)
+        if (!android.provider.Settings.canDrawOverlays(ctx)) {
+            val overlayCard = createGlassContainer(ctx).apply { setPadding(40, 40, 40, 40); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin=30 } }
+            overlayCard.addView(TextView(ctx).apply { text="INVISIBILITY CLOAK"; textSize=11f; setTextColor(0xFFF6AD55.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            overlayCard.addView(TextView(ctx).apply { text="Grant 'Display over other apps' to prevent the system from killing the background monitor."; textSize=13f; setTextColor(0xFF94A1B2.toInt()); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=10 } })
+            val btn = TextView(ctx).apply {
+                text = "GRANT PERMISSION"; textSize=12f; setTextColor(Color.BLACK); typeface=Typeface.DEFAULT_BOLD; background = GradientDrawable().apply { setColor(0xFFF6AD55.toInt()); cornerRadius=50f }; gravity = Gravity.CENTER; setPadding(0, 30, 0, 30); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=20 }
+                setOnClickListener { startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${ctx.packageName}"))) }
+            }
+            overlayCard.addView(btn)
+            content.addView(overlayCard)
+        }
+
+        // 2. HIBERNATION SHIELD
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val hibernateCard = createGlassContainer(ctx).apply { setPadding(40, 40, 40, 40); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin=30 } }
+            hibernateCard.addView(TextView(ctx).apply { text="PREVENT COMA"; textSize=11f; setTextColor(0xFFF6AD55.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            hibernateCard.addView(TextView(ctx).apply { text="Disable 'Remove permissions if app is unused' to stop Android from killing the sensors after 3 months."; textSize=13f; setTextColor(0xFF94A1B2.toInt()); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=10 } })
+            val btn = TextView(ctx).apply {
+                text = "DISABLE HIBERNATION"; textSize=12f; setTextColor(Color.BLACK); typeface=Typeface.DEFAULT_BOLD; background = GradientDrawable().apply { setColor(0xFFF6AD55.toInt()); cornerRadius=50f }; gravity = Gravity.CENTER; setPadding(0, 30, 0, 30); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=20 }
+                setOnClickListener {
+                     val intent = Intent(android.content.Intent.ACTION_AUTO_REVOKE_PERMISSIONS)
+                     intent.data = android.net.Uri.parse("package:${ctx.packageName}")
+                     startActivity(intent)
+                }
+            }
+            hibernateCard.addView(btn)
+            content.addView(hibernateCard)
+        }
+
+        // 3. BACKGROUND LOCATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && 
             androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             val btn = TextView(ctx).apply {
