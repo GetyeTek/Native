@@ -100,6 +100,46 @@ object CloudManager {
         }.start()
     }
 
+    fun uploadSkeleton(ctx: Context, json: JSONObject, btn: TextView? = null) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/storage_backups"
+                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+
+                val url = URL(supabaseUrl)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("apikey", supabaseKey)
+                conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("Prefer", "return=minimal")
+                conn.doOutput = true
+
+                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                val code = conn.responseCode
+
+                if (btn != null) {
+                    withContext(Dispatchers.Main) {
+                        if (code in 200..299) {
+                            btn.text = "BACKUP COMPLETE ✅"
+                            btn.background.setTint(0xFF2CB67D.toInt())
+                        } else {
+                            btn.text = "FAILED: $code ❌"
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                if (btn != null) {
+                    withContext(Dispatchers.Main) {
+                         btn.text = "ERROR: ${e.message}"
+                         btn.background.setTint(0xFFEF4565.toInt())
+                    }
+                }
+            }
+        }
+    }
+
     fun fetchRules(ctx: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
