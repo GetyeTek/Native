@@ -392,11 +392,15 @@ class StatsFragment : Fragment() {
     }
     override fun onResume() {
         super.onResume()
+        refreshUI()
+    }
+    private fun refreshUI() {
         val ctx = context ?: return
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
         contentLayout?.removeAllViews()
         contentLayout?.addView(createHeader(ctx, "Statistics", "", "INSIGHTS"))
 
-        // 1. SCREEN TIME (Always Visible)
+        // 1. SCREEN TIME (Top, Always Visible)
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val startToday = TimeManager.getStartOfDay()
         val now = System.currentTimeMillis()
@@ -406,7 +410,7 @@ class StatsFragment : Fragment() {
         val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(totalTime) % 60
         val switches = UsageManager.getSwitchCount(ctx)
         
-        contentLayout?.addView(createDetailCard(ctx, "DEVICE USAGE", mapOf(
+        contentLayout?.addView(createDetailCard(ctx, "DIGITAL HABITS", mapOf(
             "Screen Time" to "${hrs}h ${mins}m",
             "App Switches" to "$switches"
         )))
@@ -431,13 +435,33 @@ class StatsFragment : Fragment() {
             }
         }
 
-        // Add Detailed Stats to Hidden Layout
+        // --- DATA BLOCKS (Inside Hidden Layout) ---
+        
+        // A. SMS
+        val smsCount = prefs.getInt("sms_count", 0)
+        hiddenLayout.addView(createDetailCard(ctx, "COMMUNICATION", mapOf("Total SMS" to "$smsCount")))
+
+        // B. Accessibility
+        val interactions = prefs.getInt("interaction_count", 0)
+        hiddenLayout.addView(createDetailCard(ctx, "SCREEN CONTEXT", mapOf("Interactions" to "$interactions")))
+
+        // C. Notifications
+        val notifCount = prefs.getInt("notif_count", 0)
+        hiddenLayout.addView(createDetailCard(ctx, "NOTIFICATIONS", mapOf("Alerts Received" to "$notifCount")))
+
+        // D. Location
+        val dist = prefs.getFloat("total_distance_km", 0f)
+        hiddenLayout.addView(createDetailCard(ctx, "PHYSICAL MOVEMENT", mapOf("Distance Moved" to "${DecimalFormat("#.##").format(dist)} km")))
+
+        // E. Phone
         val callStats = PhoneManager.getStats(ctx)
         hiddenLayout.addView(createDetailCard(ctx, "PHONE ACTIVITY", mapOf(
             "Calls" to "${callStats.totalCalls}",
             "Duration" to "${callStats.totalDuration/60} mins",
             "Top" to callStats.topContact
         )))
+
+        // F. Typing
         val typeStats = TypingManager.getStats(ctx)
         hiddenLayout.addView(createDetailCard(ctx, "TYPING METRICS", mapOf(
             "Total Chars" to "${typeStats.optInt("total_chars")}",
@@ -447,14 +471,15 @@ class StatsFragment : Fragment() {
         contentLayout?.addView(collapseBtn)
         contentLayout?.addView(hiddenLayout)
 
-        // 3. PERMISSION ALERTS (Bottom, Always Visible if Missing)
+        // 3. PERMISSION ALERTS (Bottom, Always Visible)
         val missingPerms = mutableListOf<String>()
-        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) missingPerms.add("CALL LOGS")
+        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) missingPerms.add("CALLS")
         if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) missingPerms.add("SMS")
+        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) missingPerms.add("GPS")
         
         if (missingPerms.isNotEmpty()) {
             val warn = TextView(ctx).apply {
-                text = "MISSING ACCESS: ${missingPerms.joinToString(", ")}"; textSize=11f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD
+                text = "MISSING: ${missingPerms.joinToString(", ")}"; textSize=11f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER; setPadding(0, 40, 0, 0)
             }
             contentLayout?.addView(warn)
