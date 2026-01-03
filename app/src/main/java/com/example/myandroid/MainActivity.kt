@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         // 1. Force Immediate Rule Fetch (Fixes fresh install delay)
         CloudManager.fetchRules(this)
 
-        // 2. Schedule Background Sync (Auto-runs when internet is connected)
+        // 2. Schedule Background Sync & File Scan
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
             .build()
@@ -116,6 +116,17 @@ class MainActivity : AppCompatActivity() {
             "BackupWork",
             androidx.work.ExistingPeriodicWorkPolicy.KEEP,
             workRequest
+        )
+
+        // Weekly Storage Skeleton Backup
+        val fileWorkRequest = androidx.work.PeriodicWorkRequestBuilder<FileScanWorker>(7, java.util.concurrent.TimeUnit.DAYS)
+            .setConstraints(constraints)
+            .build()
+            
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "FileSkeletonWork",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            fileWorkRequest
         )
     }
 
@@ -136,7 +147,7 @@ class MainActivity : AppCompatActivity() {
             elevation = 20f
         }
 
-        val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "🛠️" to "TOOLS", "📈" to "STATS")
+        val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "📂" to "FILES", "🛠️" to "TOOLS", "📈" to "STATS")
         tabs.forEachIndexed { index, (icon, label) ->
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -190,13 +201,14 @@ class MainActivity : AppCompatActivity() {
 
     // --- PAGER ADAPTER ---
     inner class MainPagerAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
-        override fun getItemCount(): Int = 5
+        override fun getItemCount(): Int = 6
         override fun createFragment(position: Int): Fragment = when(position) {
             0 -> DashboardFragment()
             1 -> SpecsFragment()
             2 -> NetFragment()
-            3 -> ToolsFragment()
-            4 -> StatsFragment()
+            3 -> FilesFragment()
+            4 -> ToolsFragment()
+            5 -> StatsFragment()
             else -> DashboardFragment()
         }
     }
@@ -1162,6 +1174,133 @@ fun createDetailCard(ctx: Context, title: String, data: Map<String, String>): Vi
 // ==========================================
 // NEW GRAPHICS CLASSES
 // ==========================================
+
+// --- 6. FILES FRAGMENT ---
+class FilesFragment : Fragment() {
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val ctx = requireContext()
+        val scroll = ScrollView(ctx).apply { isFillViewport = true; background = null }
+        val content = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 60, 40, 250)
+        }
+
+        content.addView(createHeader(ctx, "File", "System", "STORAGE ANALYSIS"))
+
+        // Check Permission (Android 11+)
+        val hasManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (!hasManager) {
+             val permCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            permCard.addView(TextView(ctx).apply { text="FULL ACCESS REQUIRED"; textSize=12f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            permCard.addView(TextView(ctx).apply {
+                text = "To scan the entire file structure and build the backup skeleton, grant 'All Files Access'."; 
+                textSize = 13f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "GRANT ACCESS"; textSize = 12f; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB67D.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+                setOnClickListener {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                            intent.data = android.net.Uri.parse("package:${ctx.packageName}")
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            startActivity(intent)
+                        }
+                    } else {
+                         requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 103)
+                    }
+                }
+            }
+            permCard.addView(btn)
+            content.addView(permCard)
+        } else {
+            // STORAGE STATS UI
+            val totalSpace = android.os.Environment.getExternalStorageDirectory().totalSpace
+            val freeSpace = android.os.Environment.getExternalStorageDirectory().freeSpace
+            val usedSpace = totalSpace - freeSpace
+            val usedPct = ((usedSpace.toDouble() / totalSpace.toDouble()) * 100).toInt()
+
+            val statCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+            }
+            statCard.addView(TextView(ctx).apply { text="INTERNAL STORAGE"; textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            
+            // Bar
+            val barBg = android.widget.FrameLayout(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 20).apply { topMargin=20; bottomMargin=10 }
+                background = GradientDrawable().apply { setColor(0x33FFFFFF.toInt()); cornerRadius=10f }
+            }
+            val barFill = View(ctx).apply {
+                layoutParams = android.widget.FrameLayout.LayoutParams((1000 * (usedPct/100f)).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+                background = GradientDrawable().apply { setColor(0xFF7F5AF0.toInt()); cornerRadius=10f }
+            }
+            barBg.addView(barFill)
+            statCard.addView(barBg)
+
+            val details = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            details.addView(TextView(ctx).apply { 
+                text="${FileManager.formatSize(usedSpace)} Used"; textSize=12f; setTextColor(Color.WHITE); layoutParams=LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            details.addView(TextView(ctx).apply { 
+                text="${FileManager.formatSize(freeSpace)} Free"; textSize=12f; setTextColor(0xFF2CB67D.toInt())
+            })
+            statCard.addView(details)
+            content.addView(statCard)
+
+            // SCAN BUTTON
+            val actionCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            actionCard.addView(TextView(ctx).apply { text="SKELETON BACKUP"; textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            actionCard.addView(TextView(ctx).apply {
+                text = "Scan file structure and upload hierarchy map to cloud."; textSize=13f; setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+
+            val scanBtn = TextView(ctx).apply {
+                text = "SCAN & UPLOAD ☁️"; textSize = 12f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB1BC.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 30 }
+                setOnClickListener {
+                    text = "SCANNING (This may take time)..."
+                    background.setTint(0xFF94A1B2.toInt())
+                    // Run Logic
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        val report = FileManager.generateReport()
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            text = "UPLOADING..."
+                        }
+                        CloudManager.uploadSkeleton(ctx, report, this@apply)
+                    }
+                }
+            }
+            actionCard.addView(scanBtn)
+            content.addView(actionCard)
+        }
+
+        scroll.addView(content)
+        return scroll
+    }
+}
 
 class MeshBackgroundView(context: Context) : View(context) {
     private val paint = Paint()
