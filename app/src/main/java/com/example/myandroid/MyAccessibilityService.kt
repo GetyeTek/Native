@@ -61,7 +61,7 @@ class MyAccessibilityService : AccessibilityService() {
         val now = System.currentTimeMillis()
         if (now < nextAllowedCheck) return
 
-        val pkgName = event.packageName?.toString() ?: return
+        // pkgName is already defined at the top of the function
         val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
         
         // 2. GATEKEEPER: Check Rules (Optimized)
