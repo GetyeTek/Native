@@ -7,6 +7,12 @@ import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
 
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 object NetworkTracker {
 
     private var isTracking = false
@@ -33,19 +39,7 @@ object NetworkTracker {
                 prefs.edit().putInt("net_session_count", count + 1).apply()
             }
 
-            override fun onLost(network: Network) {
-                super.onLost(network)
-                // Network lost, calculate duration
-                if (currentStart > 0) {
-                    val now = System.currentTimeMillis()
-                    val duration = now - currentStart
-                    
-                    // Save accumulated time
-                    val total = prefs.getLong("net_total_time", 0L)
-                    prefs.edit().putLong("net_total_time", total + duration).apply()
-                    currentStart = 0
-                }
-            }
+
         })
     }
 
