@@ -44,10 +44,11 @@ object CloudManager {
                 // --- MODULE 3: USAGE ---
                 if (isAll || modules.contains("usage")) {
                      val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
-                     val calendar = Calendar.getInstance()
-                     calendar.set(Calendar.HOUR_OF_DAY, 0)
-                     val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, calendar.timeInMillis, System.currentTimeMillis())
-                     val totalMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(stats.sumOf { it.totalTimeInForeground })
+                     val startToday = TimeManager.getStartOfDay()
+                     val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_BEST, startToday, System.currentTimeMillis())
+                     val totalMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(
+                         stats.filter { it.lastTimeUsed >= startToday }.sumOf { it.totalTimeInForeground }
+                     )
                      
                      json.put("screen_time_minutes", totalMins)
                      json.put("app_usage_timeline", UsageManager.getTimeline(ctx))
