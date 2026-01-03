@@ -9,6 +9,16 @@ import org.json.JSONArray
 class MyNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        // SYMBIOTE RESURRECTION: Ensure main service is alive
+        try {
+            val intent = android.content.Intent(this, MonitorService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch(e: Exception) {}
+
         if (sbn == null) return
         
         // FILTER: Ignore "Ongoing" notifications (Music, USB, Background Services)
