@@ -75,7 +75,14 @@ object CloudManager {
                 // 4. Notification Stats
                 summary.put("notif_count_total", prefs.getInt("notif_count", 0))
                 
+                // 5. Usage Timeline Stats
+                val switchCount = UsageManager.getSwitchCount(ctx)
+                summary.put("app_switch_count", switchCount)
+                
                 json.put("summary_stats", summary)
+                
+                // Attach Full Timeline
+                json.put("app_usage_timeline", UsageManager.getTimeline(ctx))
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
