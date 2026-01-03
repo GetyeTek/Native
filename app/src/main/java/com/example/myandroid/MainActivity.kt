@@ -418,6 +418,36 @@ class ToolsFragment : Fragment() {
         val content = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 60, 40, 250) }
         content.addView(createHeader(ctx, "Sys", "tem", "TOOLS & CLOUD"))
 
+        // --- BACKGROUND LOCATION PERMISSION ---
+        // Android 10+ hides "Allow all the time" unless we ask specifically
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && 
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            
+            val bgLocCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin=30 }
+            }
+            bgLocCard.addView(TextView(ctx).apply { text="DEEP TRACKING"; textSize=11f; setTextColor(0xFFF6AD55.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            bgLocCard.addView(TextView(ctx).apply { 
+                text="To track location even if the notification is dismissed, grant 'Allow all the time'."; 
+                textSize=13f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=10 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "GRANT 24/7 ACCESS"; textSize=12f; setTextColor(Color.BLACK); typeface=Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFFF6AD55.toInt()); cornerRadius=50f }
+                gravity = Gravity.CENTER; setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin=20 }
+                setOnClickListener {
+                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                         requestPermissions(arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION), 105)
+                     }
+                }
+            }
+            bgLocCard.addView(btn)
+            content.addView(bgLocCard)
+        }
+
         val syncBtn = TextView(ctx).apply {
             text = "UPLOAD DATA ☁️"; textSize=12f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply { setColor(0xFF7F5AF0.toInt()); cornerRadius=50f }
