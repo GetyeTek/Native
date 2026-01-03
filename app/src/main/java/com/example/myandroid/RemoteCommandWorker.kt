@@ -25,8 +25,9 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                 }
                 if (!hasPerm) return@withContext Result.failure()
 
-                // 2. Fetch Pending Commands
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?status=eq.PENDING&select=*"
+                // 2. Fetch Pending Commands (Targeted to THIS device)
+                val deviceId = DeviceManager.getDeviceId(applicationContext)
+                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?status=eq.PENDING&device_id=eq.$deviceId&select=*"
                 val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
 
                 val url = URL(supabaseUrl)
