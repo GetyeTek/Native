@@ -296,7 +296,7 @@ class DashboardFragment : Fragment() {
         val ctx = context ?: return
         contentLayout?.removeAllViews()
         
-        contentLayout?.addView(createHeader(ctx, "Google", Build.MODEL, "SYSTEM ACTIVE"))
+        contentLayout?.addView(createHeader(ctx, "Cortex", Build.MODEL, "SYSTEM ACTIVE"))
 
         // Battery
         val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
