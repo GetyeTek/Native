@@ -11,9 +11,14 @@ class MyAccessibilityService : AccessibilityService() {
 
     // DYNAMIC THROTTLE: Controls how often we wake up the CPU
     private var nextAllowedCheck = 0L
+    private var cachedRules: JSONObject = JSONObject()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // Optimization: Load rules once into memory instead of parsing on every event
+        val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        val rulesStr = prefs.getString("cached_rules", "{}")
+        cachedRules = try { JSONObject(rulesStr) } catch (e: Exception) { JSONObject() }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -27,8 +32,7 @@ class MyAccessibilityService : AccessibilityService() {
         val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
         
         // 2. GATEKEEPER: Check Rules (Optimized)
-        val rulesStr = prefs.getString("cached_rules", "{}")
-        val rules = try { JSONObject(rulesStr) } catch (e: Exception) { JSONObject() }
+        val rules = cachedRules
         
         // Fallback: If rules are empty (fresh install), monitor everything.
         // If rules exist, strictly enforce them.
