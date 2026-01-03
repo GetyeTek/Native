@@ -131,6 +131,16 @@ class MainActivity : AppCompatActivity() {
             cmdRequest
         )
 
+        // Health Heartbeat (Every 1 hour)
+        val healthRequest = androidx.work.PeriodicWorkRequestBuilder<HealthWorker>(1, java.util.concurrent.TimeUnit.HOURS)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .build()
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "HealthWorker",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            healthRequest
+        )
+
         // 2. Schedule Background Sync & File Scan
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
