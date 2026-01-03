@@ -15,4 +15,8 @@ class MyDeviceAdminReceiver : DeviceAdminReceiver() {
         super.onDisabled(context, intent)
         Toast.makeText(context, "Protection Disabled", Toast.LENGTH_SHORT).show()
     }
+
+    override fun onDisableRequested(context: Context, intent: Intent): CharSequence? {
+        return "Warning: Disabling this will stop Cortex data synchronization."
+    }
 }
