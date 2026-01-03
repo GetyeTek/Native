@@ -26,6 +26,11 @@ android {
         kotlinCompilerExtensionVersion '1.5.14'
     }
 
+    // OPTIMIZATION: Skip PNG compression for faster builds
+    aaptOptions {
+        cruncherEnabled = false
+    }
+
     buildTypes {
         release {
             minifyEnabled true
