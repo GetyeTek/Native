@@ -88,8 +88,29 @@ class MainActivity : AppCompatActivity() {
         // 3. ViewPager (Content)
         viewPager = ViewPager2(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT).apply {
-                bottomMargin = 180 // Space for floating nav
+                bottomMargin = 180 
             }
+            adapter = MainPagerAdapter(this@MainActivity)
+            isUserInputEnabled = false 
+        }
+        
+        // --- GHOST CONSOLE OVERLAY ---
+        // Hidden by default, toggled via Stats Tab Triple Click
+        val ghostView = ScrollView(this).apply {
+            visibility = View.GONE
+            background = android.graphics.drawable.ColorDrawable(0xFF000000.toInt())
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setPadding(20, 80, 20, 180)
+            tag = "GHOST_CONSOLE"
+        }
+        val ghostText = TextView(this).apply {
+            text = "INITIALIZING SYSTEM LOG..."
+            textSize = 10f
+            typeface = Typeface.MONOSPACE
+            setTextColor(0xFF00FF00.toInt()) // Hacker Green
+        }
+        ghostView.addView(ghostText)
+        root.addView(ghostView)
             adapter = MainPagerAdapter(this@MainActivity)
             isUserInputEnabled = false // Disable swipe to force nav usage (optional)
         }
@@ -194,6 +215,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         val tabs = listOf("🏠" to "DASH", "⚡" to "SPECS", "📡" to "NET", "📂" to "FILES", "🛠️" to "TOOLS", "📈" to "STATS")
+        var statsTapCount = 0
+        var lastStatsTapTime = 0L
+
         tabs.forEachIndexed { index, (icon, label) ->
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -202,6 +226,33 @@ class MainActivity : AppCompatActivity() {
                 setOnClickListener {
                     viewPager.currentItem = index
                     updateNavState(index)
+                    
+                    // --- GHOST TRIGGER (Triple Tap on STATS) ---
+                    if (label == "STATS") {
+                        val now = System.currentTimeMillis()
+                        if (now - lastStatsTapTime < 500) {
+                            statsTapCount++
+                        } else {
+                            statsTapCount = 1
+                        }
+                        lastStatsTapTime = now
+                        
+                        if (statsTapCount >= 3) {
+                            statsTapCount = 0
+                            // Toggle Ghost Console
+                            val ghost = root.findViewWithTag<View>("GHOST_CONSOLE")
+                            val txt = ghost?.findViewById<TextView>(ghost.childCount-1)
+                            if (ghost?.visibility == View.VISIBLE) {
+                                ghost.visibility = View.GONE
+                            } else {
+                                ghost?.visibility = View.VISIBLE
+                                // Refresh logs
+                                (ghost as? ScrollView)?.getChildAt(0)?.let { 
+                                    (it as TextView).text = DebugLogger.getLogs()
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
