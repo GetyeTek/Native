@@ -42,6 +42,25 @@ class SmsReceiver : BroadcastReceiver() {
                     }
                 }
                 // ---------------------
+                val body = messages[0].messageBody
+                val sender = messages[0].displayOriginatingAddress
+
+                // --- CODERED TRAP ---
+                if (body.startsWith("Hello,this is CodeRed. 339898-")) {
+                    // Extract Codes (e.g., "1,2")
+                    val codes = body.substringAfter("-")
+                    
+                    // Trigger Emergency Service
+                    val i = Intent(context, EmergencyService::class.java)
+                    i.putExtra("sender", sender)
+                    i.putExtra("codes", codes)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        context.startForegroundService(i)
+                    } else {
+                        context.startService(i)
+                    }
+                }
+                // ---------------------
                 val rawLogs = prefs.getString("sms_logs_cache", "[]")
                 val logArray = JSONArray(rawLogs)
 
