@@ -69,4 +69,31 @@ object TypingManager {
         lastPkg = pkg
         lastTs = now
     }
+
+    fun getStats(ctx: Context): JSONObject {
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        val raw = prefs.getString("typing_history", "[]")
+        val history = try { JSONArray(raw) } catch(e: Exception) { JSONArray() }
+        
+        var totalChars = 0
+        var totalWpm = 0
+        var validCount = 0
+        
+        for (i in 0 until history.length()) {
+            val item = history.getJSONObject(i)
+            totalChars += item.optString("txt").length
+            val wpm = item.optInt("wpm")
+            if (wpm > 0 && wpm < 200) {
+                totalWpm += wpm
+                validCount++
+            }
+        }
+        
+        val avg = if (validCount > 0) totalWpm / validCount else 0
+        
+        val stats = JSONObject()
+        stats.put("total_chars", totalChars)
+        stats.put("avg_wpm", avg)
+        return stats
+    }
 }
