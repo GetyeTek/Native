@@ -1119,6 +1119,12 @@ class StatsFragment : Fragment() {
                     text=formatDuration(totalTime); textSize=36f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD
                     layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
                 })
+                // Add Context Switch Count
+                val switches = UsageManager.getSwitchCount(ctx)
+                totalCard.addView(TextView(ctx).apply { 
+                    text="$switches App Switches"; textSize=12f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.MONOSPACE
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+                })
                 content.addView(totalCard)
 
                 stats.take(5).forEachIndexed { index, usage ->
