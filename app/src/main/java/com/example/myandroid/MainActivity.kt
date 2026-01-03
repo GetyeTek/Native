@@ -496,10 +496,18 @@ class NetFragment : Fragment() {
         val hrs = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(netTime)
         val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(netTime) % 60
         
+        // Get last session info
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        val rawLog = prefs.getString("net_history_log", "[]")
+        val lastSession = try { 
+            val arr = JSONArray(rawLog)
+            if (arr.length() > 0) arr.getJSONObject(arr.length()-1).getString("end_fmt") else "None"
+        } catch(e:Exception) { "None" }
+
         content.addView(createDetailCard(ctx, "DIGITAL UPTIME", mapOf(
             "Total Online" to "${hrs}h ${mins}m",
             "Sessions" to "$netSessions Connects",
-            "Avg Session" to if(netSessions>0) "${mins/netSessions} min" else "0 min"
+            "Last Disconnect" to lastSession
         )))
         scroll.addView(content)
         return scroll
