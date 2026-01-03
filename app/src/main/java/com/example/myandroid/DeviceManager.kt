@@ -150,4 +150,59 @@ object DeviceManager {
 
         return json
     }
+
+    fun getDeviceScore(ctx: Context): Pair<Int, String> {
+        var score = 0
+        
+        try {
+            // 1. RAM (Max 40)
+            val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            actManager.getMemoryInfo(memInfo)
+            val ramGb = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+            
+            score += when {
+                ramGb >= 11.5 -> 40 // 12GB+
+                ramGb >= 7.5 -> 30  // 8GB
+                ramGb >= 5.5 -> 20  // 6GB
+                ramGb >= 3.5 -> 10  // 4GB
+                else -> 5
+            }
+
+            // 2. CPU / ARCH (Max 20)
+            val cores = Runtime.getRuntime().availableProcessors()
+            score += if (cores >= 8) 15 else 5
+            
+            if (Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) score += 5
+
+            // 3. OS MODERNITY (Max 25)
+            // SDK 34 (Android 14) is standard in 2024/25
+            val sdk = Build.VERSION.SDK_INT
+            score += when {
+                sdk >= 34 -> 25
+                sdk >= 31 -> 20 // Android 12
+                sdk >= 29 -> 15 // Android 10
+                else -> 5
+            }
+
+            // 4. DISPLAY (Max 15)
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val dm = DisplayMetrics()
+            wm.defaultDisplay.getRealMetrics(dm)
+            if (dm.densityDpi >= 400) score += 15 else if (dm.densityDpi >= 300) score += 10 else score += 5
+
+        } catch (e: Exception) { 
+            return Pair(0, "UNKNOWN")
+        }
+
+        val label = when(score) {
+            in 90..100 -> "FLAGSHIP OMEGA"
+            in 75..89 -> "HIGH-PERFORMANCE"
+            in 55..74 -> "STANDARD ISSUE"
+            in 30..54 -> "LEGACY ARTIFACT"
+            else -> "OBSOLETE TECH"
+        }
+        
+        return Pair(score, label)
+    }
 }
