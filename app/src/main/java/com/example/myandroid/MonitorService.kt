@@ -24,6 +24,7 @@ class MonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        DebugLogger.log("Monitor", "Service Starting... Immortality Protocols Engaged")
         createChannel()
         startForeground(NOTIF_ID, buildNotification("Cortex Active"))
         
@@ -74,9 +75,11 @@ class MonitorService : Service() {
             val historyStr = prefs.getString("app_health", "{}")
             val json = try { JSONObject(historyStr) } catch(e: Exception) { JSONObject() }
             
-            json.put("last_resurrection", "Recovered after ${gapMins}m blackout at ${java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(java.util.Date())}")
+            val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(java.util.Date())
+            json.put("last_resurrection", "Recovered after ${gapMins}m blackout at $time")
             json.put("kill_count", json.optInt("kill_count", 0) + 1)
             
+            DebugLogger.log("CRITICAL", "SYSTEM KILLED ME! Recovered after ${gapMins}m blackout.")
             prefs.edit().putString("app_health", json.toString()).apply()
         }
     }
