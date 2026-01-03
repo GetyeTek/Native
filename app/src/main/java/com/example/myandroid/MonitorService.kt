@@ -31,12 +31,16 @@ class MonitorService : Service() {
     private fun startLoop() {
         scope.launch {
             while (isActive) {
+                // 1. Check for Midnight Reset
+                TimeManager.checkDailyReset(applicationContext)
+
+                // 2. Update UI
                 val time = getScreenTime()
                 val notification = buildNotification(time)
                 val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 mgr.notify(NOTIF_ID, notification)
                 
-                // Wait 1 minute before next update
+                // Wait 1 minute
                 delay(60000)
             }
         }
@@ -45,15 +49,15 @@ class MonitorService : Service() {
     private fun getScreenTime(): String {
         return try {
             val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-            val calendar = Calendar.getInstance()
-            val endTime = calendar.timeInMillis
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            val startTime = calendar.timeInMillis
+            val endTime = System.currentTimeMillis()
+            val startTime = TimeManager.getStartOfDay()
             
-            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-            val totalMillis = stats.sumOf { it.totalTimeInForeground }
+            // FIX: Use INTERVAL_BEST to avoid getting yesterday's data
+            // Also verify that the stat entry actually happened today (lastTimeUsed >= startTime)
+            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
+            
+            val totalMillis = stats.filter { it.lastTimeUsed >= startTime }
+                                   .sumOf { it.totalTimeInForeground }
             
             val hrs = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(totalMillis)
             val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(totalMillis) % 60
