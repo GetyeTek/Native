@@ -22,6 +22,7 @@ object CloudManager {
                 
                 val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
                 val smsCount = prefs.getInt("sms_count", 0)
+                val (netTime, netSessions) = NetworkTracker.getStats(ctx)
                 
                 val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
                 val calendar = Calendar.getInstance()
@@ -38,6 +39,8 @@ object CloudManager {
                 json.put("battery_level", level)
                 json.put("sms_count", smsCount)
                 json.put("screen_time_minutes", totalMins)
+                json.put("online_time_minutes", java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(netTime))
+                json.put("online_sessions", netSessions)
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
