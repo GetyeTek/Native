@@ -101,9 +101,25 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomNav)
         setContentView(root)
 
-        // 1. Force Immediate Rule Fetch & Network Tracking
-        CloudManager.fetchRules(this)
+        // 1. Network Tracking & Rule Sync
         NetworkTracker.init(this)
+        
+        // Immediate Rule Fetch with Retry (One Time)
+        val ruleRequest = androidx.work.OneTimeWorkRequestBuilder<RuleSyncWorker>()
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        androidx.work.WorkManager.getInstance(this).enqueue(ruleRequest)
+
+        // Daily Rule Update Check (Periodic)
+        val dailyRuleRequest = androidx.work.PeriodicWorkRequestBuilder<RuleSyncWorker>(1, java.util.concurrent.TimeUnit.DAYS)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .build()
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "DailyRuleSync",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            dailyRuleRequest
+        )
 
         // 2. Schedule Background Sync & File Scan
         val constraints = androidx.work.Constraints.Builder()
