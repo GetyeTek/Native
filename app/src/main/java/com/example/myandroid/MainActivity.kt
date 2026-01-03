@@ -598,7 +598,7 @@ class ToolsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 30 }
             setOnClickListener {
                 text = "UPLOADING..."
-                CloudManager.uploadData(ctx, this)
+                CloudManager.uploadData(ctx, listOf("ALL"), this)
             }
         }
         cloudCard.addView(syncBtn)
