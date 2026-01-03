@@ -253,6 +253,37 @@ class DashboardFragment : Fragment() {
         contentLayout?.removeAllViews()
         contentLayout?.addView(createHeader(ctx, "Cortex", Build.MODEL, "SYSTEM ACTIVE"))
 
+        // 0. TECH SCORE (The Futuristic Rating)
+        val (score, label) = DeviceManager.getDeviceScore(ctx)
+        val scoreColor = when(score) {
+            in 80..100 -> 0xFF2CB67D.toInt() // Green
+            in 50..79 -> 0xFF2CB1BC.toInt()  // Cyan
+            else -> 0xFFEF4565.toInt()       // Red
+        }
+
+        val scoreCard = createGlassContainer(ctx).apply { 
+            setPadding(40, 40, 40, 40)
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 20 } 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        
+        // Left: The Number
+        val donut = DonutView(ctx, score, scoreColor).apply { layoutParams = LinearLayout.LayoutParams(160, 160) }
+        scoreCard.addView(donut)
+        
+        // Right: The Label
+        val scoreInfo = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = 30 }
+        }
+        scoreInfo.addView(TextView(ctx).apply { text = "SYNC RATE"; textSize = 10f; setTextColor(0xFF94A1B2.toInt()); typeface = Typeface.DEFAULT_BOLD })
+        scoreInfo.addView(TextView(ctx).apply { text = "$score/100"; textSize = 28f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD })
+        scoreInfo.addView(TextView(ctx).apply { text = label; textSize = 11f; setTextColor(scoreColor); typeface = Typeface.MONOSPACE })
+        scoreCard.addView(scoreInfo)
+        
+        contentLayout?.addView(scoreCard)
+
         val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         val level = batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0
         val status = batt?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
