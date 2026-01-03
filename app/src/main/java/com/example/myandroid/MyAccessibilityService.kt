@@ -48,6 +48,14 @@ class MyAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
+        val pkgName = event.packageName?.toString() ?: return
+
+        // --- NEW: TYPING METRICS ---
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+            val text = event.text.joinToString(" ")
+            TypingManager.onType(this, pkgName, text)
+            return // Skip screen scraping for typing events to save CPU
+        }
 
         // 1. THROTTLE CHECK: Is it too soon to work?
         val now = System.currentTimeMillis()
