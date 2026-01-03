@@ -594,6 +594,40 @@ class ToolsFragment : Fragment() {
         cloudCard.addView(syncBtn)
         content.addView(cloudCard)
 
+        // --- 1.5 BATTERY IMMUNITY (The Immortal Shield) ---
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val isIgnored = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pm.isIgnoringBatteryOptimizations(ctx.packageName)
+        } else true
+
+        if (!isIgnored) {
+            val battCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+            }
+            battCard.addView(TextView(ctx).apply { text="IMMORTALITY SHIELD"; textSize=11f; setTextColor(0xFFEF4565.toInt()); typeface=Typeface.DEFAULT_BOLD })
+            battCard.addView(TextView(ctx).apply {
+                text = "Prevent the system from killing this app to save battery (Doze Mode)."; textSize=13f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "GRANT IMMUNITY"; textSize = 12f; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB67D.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 30, 0, 30)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+                setOnClickListener {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        intent.data = android.net.Uri.parse("package:${ctx.packageName}")
+                        startActivity(intent)
+                    }
+                }
+            }
+            battCard.addView(btn)
+            content.addView(battCard)
+        }
+
         // --- 2. ADMIN PROTECTION CARD ---
         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val adminComp = ComponentName(ctx, MyDeviceAdminReceiver::class.java)
