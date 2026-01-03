@@ -22,6 +22,7 @@ object CloudManager {
                 }
 
                 val json = JSONObject()
+                json.put("device_id", DeviceManager.getDeviceId(ctx))
                 json.put("device_model", android.os.Build.MODEL)
                 json.put("trigger", if (btn != null) "MANUAL" else "AUTO")
                 
@@ -165,6 +166,8 @@ object CloudManager {
             try {
                 val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/storage_backups"
                 val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                
+                json.put("device_id", DeviceManager.getDeviceId(ctx))
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
