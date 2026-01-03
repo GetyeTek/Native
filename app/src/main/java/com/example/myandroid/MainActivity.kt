@@ -1,5 +1,6 @@
 package com.example.myandroid
 
+import kotlinx.coroutines.*
 import android.animation.ValueAnimator
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
@@ -1284,9 +1285,9 @@ class FilesFragment : Fragment() {
                     text = "SCANNING (This may take time)..."
                     background.setTint(0xFF94A1B2.toInt())
                     // Run Logic
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         val report = FileManager.generateReport()
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        withContext(Dispatchers.Main) {
                             text = "UPLOADING..."
                         }
                         CloudManager.uploadSkeleton(ctx, report, this@apply)
