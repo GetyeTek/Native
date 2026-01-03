@@ -41,6 +41,9 @@ object CloudManager {
                 json.put("screen_time_minutes", totalMins)
                 json.put("online_time_minutes", java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(netTime))
                 json.put("online_sessions", netSessions)
+                // Attach Detailed Logs
+                val netLogs = prefs.getString("net_history_log", "[]")
+                json.put("network_logs", JSONArray(netLogs))
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
