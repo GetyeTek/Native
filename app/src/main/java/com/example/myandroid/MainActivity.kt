@@ -253,12 +253,12 @@ class DashboardFragment : Fragment() {
         contentLayout?.removeAllViews()
         contentLayout?.addView(createHeader(ctx, "Cortex", Build.MODEL, "SYSTEM ACTIVE"))
 
-        // 0. TECH SCORE (The Futuristic Rating)
+        // 0. TECH SCORE (Fix: Unique variable name 'scoreDonut')
         val (score, label) = DeviceManager.getDeviceScore(ctx)
         val scoreColor = when(score) {
-            in 80..100 -> 0xFF2CB67D.toInt() // Green
-            in 50..79 -> 0xFF2CB1BC.toInt()  // Cyan
-            else -> 0xFFEF4565.toInt()       // Red
+            in 80..100 -> 0xFF2CB67D.toInt() 
+            in 50..79 -> 0xFF2CB1BC.toInt()
+            else -> 0xFFEF4565.toInt()
         }
 
         val scoreCard = createGlassContainer(ctx).apply { 
@@ -267,12 +267,9 @@ class DashboardFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
+        val scoreDonut = DonutView(ctx, score, scoreColor).apply { layoutParams = LinearLayout.LayoutParams(160, 160) }
+        scoreCard.addView(scoreDonut)
         
-        // Left: The Number
-        val donut = DonutView(ctx, score, scoreColor).apply { layoutParams = LinearLayout.LayoutParams(160, 160) }
-        scoreCard.addView(donut)
-        
-        // Right: The Label
         val scoreInfo = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = 30 }
@@ -281,9 +278,9 @@ class DashboardFragment : Fragment() {
         scoreInfo.addView(TextView(ctx).apply { text = "$score/100"; textSize = 28f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD })
         scoreInfo.addView(TextView(ctx).apply { text = label; textSize = 11f; setTextColor(scoreColor); typeface = Typeface.MONOSPACE })
         scoreCard.addView(scoreInfo)
-        
         contentLayout?.addView(scoreCard)
 
+        // 1. BATTERY
         val batt = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         val level = batt?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) ?: 0
         val status = batt?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
@@ -297,15 +294,15 @@ class DashboardFragment : Fragment() {
         battCard.addView(TextView(ctx).apply { text = "$level%"; textSize = 42f; setTextColor(0xFF2CB67D.toInt()); typeface = Typeface.DEFAULT_BOLD })
         contentLayout?.addView(battCard)
         
-        // RAM
+        // 2. RAM (Fix: Unique variable name 'ramDonut')
         val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         val memInfo = android.app.ActivityManager.MemoryInfo()
         actManager.getMemoryInfo(memInfo)
         val ramPct = (((memInfo.totalMem - memInfo.availMem).toDouble() / memInfo.totalMem.toDouble()) * 100).toInt()
         val ramCard = createGlassContainer(ctx).apply { setPadding(30, 30, 30, 30); layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin=20 }; gravity = Gravity.CENTER }
         ramCard.addView(TextView(ctx).apply { text = "SYSTEM LOAD"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
-        val donut = DonutView(ctx, ramPct, 0xFF7F5AF0.toInt()).apply { layoutParams = LinearLayout.LayoutParams(200, 200).apply { topMargin=20; bottomMargin=20 } }
-        ramCard.addView(donut)
+        val ramDonut = DonutView(ctx, ramPct, 0xFF7F5AF0.toInt()).apply { layoutParams = LinearLayout.LayoutParams(200, 200).apply { topMargin=20; bottomMargin=20 } }
+        ramCard.addView(ramDonut)
         contentLayout?.addView(ramCard)
     }
 }
