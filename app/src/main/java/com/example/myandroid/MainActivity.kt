@@ -101,8 +101,9 @@ class MainActivity : AppCompatActivity() {
         root.addView(bottomNav)
         setContentView(root)
 
-        // 1. Force Immediate Rule Fetch (Fixes fresh install delay)
+        // 1. Force Immediate Rule Fetch & Network Tracking
         CloudManager.fetchRules(this)
+        NetworkTracker.init(this)
 
         // 2. Schedule Background Sync & File Scan
         val constraints = androidx.work.Constraints.Builder()
@@ -489,6 +490,17 @@ class NetFragment : Fragment() {
             row.addView(speedCard)
             content.addView(row)
         }
+
+        // 3. USAGE STATS
+        val (netTime, netSessions) = NetworkTracker.getStats(ctx)
+        val hrs = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(netTime)
+        val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(netTime) % 60
+        
+        content.addView(createDetailCard(ctx, "DIGITAL UPTIME", mapOf(
+            "Total Online" to "${hrs}h ${mins}m",
+            "Sessions" to "$netSessions Connects",
+            "Avg Session" to if(netSessions>0) "${mins/netSessions} min" else "0 min"
+        )))
         scroll.addView(content)
         return scroll
     }
