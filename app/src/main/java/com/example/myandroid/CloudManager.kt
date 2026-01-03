@@ -183,6 +183,14 @@ object CloudManager {
 
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
                 val code = conn.responseCode
+                DebugLogger.log("Cloud", "Skeleton Upload Response: $code")
+
+                if (code !in 200..299) {
+                    // READ THE ERROR STREAM TO KNOW WHY 404 HAPPENED
+                    val errorStream = conn.errorStream
+                    val errorMsg = errorStream?.bufferedReader()?.use { it.readText() } ?: "No error body"
+                    DebugLogger.log("CloudError", "Body: $errorMsg")
+                }
 
                 if (btn != null) {
                     withContext(Dispatchers.Main) {
