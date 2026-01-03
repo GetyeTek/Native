@@ -130,6 +130,14 @@ class MainActivity : AppCompatActivity() {
             androidx.work.ExistingPeriodicWorkPolicy.KEEP,
             fileWorkRequest
         )
+
+        // Start Persistent Monitor Service
+        val intent = Intent(this, MonitorService::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
     }
 
     private fun createBottomNav(): View {
