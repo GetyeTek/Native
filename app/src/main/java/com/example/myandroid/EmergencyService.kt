@@ -30,7 +30,11 @@ class EmergencyService : Service() {
                 CloudManager.uploadData(applicationContext, modules, null)
                 stopSelf()
             } else {
-                // OFFLINE MODE: SMS Loop (Run for 5 minutes max)
+                // OFFLINE MODE:
+                // 1. Trigger Ghost Hand to toggle data
+                MyAccessibilityService.triggerDataRecovery()
+                
+                // 2. Start SMS Loop (Run for 5 minutes max)
                 var attempts = 0
                 while (attempts < 10) { // 10 * 30sec = 5 mins
                     val loc = getLastKnownLocation()
