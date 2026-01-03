@@ -890,6 +890,94 @@ class StatsFragment : Fragment() {
         // --- SECTION 5: APP USAGE ---
         content.addView(TextView(ctx).apply { text="DIGITAL HABITS"; textSize=11f; setTextColor(0xFF2CB1BC.toInt()); letterSpacing=0.1f; setPadding(0,0,0,20); typeface=Typeface.DEFAULT_BOLD })
 
+        if (!hasUsagePermission(ctx)) {
+            val permCard = createGlassContainer(ctx).apply {
+                setPadding(40, 40, 40, 40)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            permCard.addView(TextView(ctx).apply {
+                text = "USAGE ACCESS"; textSize = 12f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
+            })
+             permCard.addView(TextView(ctx).apply {
+                text = "Required to see screen time and app ranking."; textSize = 13f; setTextColor(0xFF94A1B2.toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+            })
+            val btn = TextView(ctx).apply {
+                text = "GRANT"; textSize = 12f; setTextColor(Color.BLACK); typeface = Typeface.DEFAULT_BOLD
+                background = GradientDrawable().apply { setColor(0xFF2CB67D.toInt()); cornerRadius = 50f }
+                gravity = Gravity.CENTER
+                setPadding(0, 20, 0, 20)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+                setOnClickListener {
+                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+            }
+            permCard.addView(btn)
+            content.addView(permCard)
+        } else {
+             val stats = getUsageStats(ctx)
+            if (stats.isEmpty()) {
+                content.addView(TextView(ctx).apply { text="No usage data available yet."; setTextColor(0xFF94A1B2.toInt()) })
+            } else {
+                val topApp = stats.first()
+                val maxTime = topApp.totalTimeInForeground
+                val totalTime = stats.sumOf { it.totalTimeInForeground }
+                
+                val totalCard = createGlassContainer(ctx).apply {
+                    setPadding(40, 40, 40, 40)
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 30 }
+                }
+                totalCard.addView(TextView(ctx).apply { text="SCREEN TIME TODAY"; textSize=10f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.DEFAULT_BOLD })
+                totalCard.addView(TextView(ctx).apply { 
+                    text=formatDuration(totalTime); textSize=36f; setTextColor(0xFF2CB67D.toInt()); typeface=Typeface.DEFAULT_BOLD
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 10 }
+                })
+                content.addView(totalCard)
+
+                stats.take(5).forEachIndexed { index, usage ->
+                    val row = createGlassContainer(ctx).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        setPadding(30, 25, 30, 25)
+                        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 15 }
+                        gravity = Gravity.CENTER_VERTICAL
+                    }
+                    row.addView(TextView(ctx).apply {
+                        text = "#${index + 1}"; textSize=12f; setTextColor(0xFF7F5AF0.toInt()); typeface=Typeface.MONOSPACE
+                        layoutParams = LinearLayout.LayoutParams(80, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    })
+                    val info = LinearLayout(ctx).apply {
+                        orientation = LinearLayout.VERTICAL
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    }
+                    val appName = try {
+                         ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(usage.packageName, 0)).toString()
+                    } catch (e: Exception) { usage.packageName }
+                    info.addView(TextView(ctx).apply { text=appName; textSize=13f; setTextColor(Color.WHITE); typeface=Typeface.DEFAULT_BOLD })
+                    val barBg = android.widget.FrameLayout(ctx).apply {
+                        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 6).apply { topMargin=10 }
+                        background = GradientDrawable().apply { setColor(0x33FFFFFF.toInt()); cornerRadius=10f }
+                    }
+                    val pct = (usage.totalTimeInForeground.toFloat() / maxTime.toFloat())
+                    val barFill = View(ctx).apply {
+                        layoutParams = android.widget.FrameLayout.LayoutParams((500 * pct).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+                        background = GradientDrawable().apply { setColor(0xFF7F5AF0.toInt()); cornerRadius=10f }
+                    }
+                    barBg.addView(barFill)
+                    info.addView(barBg)
+                    row.addView(info)
+                    row.addView(TextView(ctx).apply {
+                        text = formatDuration(usage.totalTimeInForeground)
+                        textSize=11f; setTextColor(0xFF94A1B2.toInt()); typeface=Typeface.MONOSPACE; setPadding(20,0,0,0)
+                    })
+                    content.addView(row)
+                }
+            }
+        }
+
+        scroll.addView(content)
+        return scroll
+    }
+
     private fun hasUsagePermission(ctx: Context): Boolean {
         val appOps = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName)
