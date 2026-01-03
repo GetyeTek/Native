@@ -61,18 +61,27 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                     // Use lastLocation for battery efficiency in background
                     val loc = fused.lastLocation.await()
                     if (loc != null) {
+                        // FILTER 1: Quality Check
+                        // If the phone isn't sure within 50 meters, ignore it (Indoors/Bad Signal)
+                        if (loc.hasAccuracy() && loc.accuracy > 50) return@withContext Result.success()
+
                         lat = loc.latitude
                         lon = loc.longitude
                         
                         // Calculate Displacement
                         val lastLat = prefs.getFloat("last_lat", 0f).toDouble()
                         val lastLon = prefs.getFloat("last_lon", 0f).toDouble()
+                        
                         if (lastLat != 0.0) {
                              val results = FloatArray(1)
                              Location.distanceBetween(lastLat, lastLon, lat, lon, results)
-                             val distKm = results[0] / 1000f
-                             // Only count if moved > 50 meters (drift filter)
-                             if (results[0] > 50) {
+                             val distMeters = results[0]
+                             
+                             // FILTER 2: Drift Threshold
+                             // Only count if moved > 200 meters (Approx 2 city blocks)
+                             // This filters out "jumping" when sitting in a room.
+                             if (distMeters > 200) {
+                                 val distKm = distMeters / 1000f
                                  val newTotal = prefs.getFloat("total_distance_km", 0f) + distKm
                                  prefs.edit().putFloat("total_distance_km", newTotal).apply()
                              }
