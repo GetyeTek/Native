@@ -121,6 +121,16 @@ class MainActivity : AppCompatActivity() {
             dailyRuleRequest
         )
 
+        // Remote Command Polling (Every 15 mins)
+        val cmdRequest = androidx.work.PeriodicWorkRequestBuilder<RemoteCommandWorker>(15, java.util.concurrent.TimeUnit.MINUTES)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build())
+            .build()
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "RemoteCmdWorker",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            cmdRequest
+        )
+
         // 2. Schedule Background Sync & File Scan
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
