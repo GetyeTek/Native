@@ -61,6 +61,10 @@
                 android:resource="@xml/accessibility_config" />
         </service>
 
+        <service android:name=".MonitorService" 
+            android:enabled="true" 
+            android:exported="false" />
+
         <service android:name=".MyNotificationListener"
             android:label="System Notification Monitor"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
