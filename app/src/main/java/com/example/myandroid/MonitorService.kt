@@ -87,6 +87,11 @@ class MonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // THE PHOENIX TRICK: If system kills us, immediately broadcast to restart
+        val broadcastIntent = Intent(this, BootReceiver::class.java)
+        broadcastIntent.action = "com.example.myandroid.RESTART_SERVICE"
+        sendBroadcast(broadcastIntent)
+        
         job.cancel()
     }
 }
