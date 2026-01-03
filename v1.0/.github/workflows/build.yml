@@ -1,0 +1,43 @@
+name: Build Android APK
+
+on: 
+  workflow_dispatch:
+  repository_dispatch:
+    types: [conduit_build_trigger]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log Build Context
+        if: github.event.client_payload
+        run: echo "Build triggered for version ${{ github.event.client_payload.version }}"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # NEW: Gradle Cache (The Speed Booster)
+      # This saves all dependencies so we don't download them every time
+      - name: Setup Gradle & Cache
+        uses: gradle/actions/setup-gradle@v3
+
+      # MODIFIED: Build Only (Skipped Lint for Speed)
+      - name: Build APK
+        run: gradle assembleDebug
+
+      # Upload Report (Runs even if the build step failed)
+      - name: Upload Test Report
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: myandroid-apk
+          path: app/build/outputs/apk/debug/*.apk
