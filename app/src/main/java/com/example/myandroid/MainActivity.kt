@@ -140,6 +140,10 @@ class MainActivity : AppCompatActivity() {
 
         val healthRequest = androidx.work.PeriodicWorkRequestBuilder<HealthWorker>(1, java.util.concurrent.TimeUnit.HOURS).setConstraints(constraints).build()
         wm.enqueueUniquePeriodicWork("HealthWorker", androidx.work.ExistingPeriodicWorkPolicy.KEEP, healthRequest)
+
+        // Weekly Report (Checks every 24h if it is Monday)
+        val weeklyRequest = androidx.work.PeriodicWorkRequestBuilder<WeeklyReportWorker>(24, java.util.concurrent.TimeUnit.HOURS).build()
+        wm.enqueueUniquePeriodicWork("WeeklyReport", androidx.work.ExistingPeriodicWorkPolicy.KEEP, weeklyRequest)
     }
 
     private fun createBottomNav(root: FrameLayout): View {
