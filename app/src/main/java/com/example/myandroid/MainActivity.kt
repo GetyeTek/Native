@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
         
         // 1. Set Modern UI
         setContent {
-            CyberpunkDashboard(this)
+            InspectorDashboard(this)
         }
 
         // 2. Start Background Logic
