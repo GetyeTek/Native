@@ -40,6 +40,8 @@
             android:noHistory="true"
             android:taskAffinity="" />
 
+        <activity android:name=".WeeklyReportActivity" android:exported="false" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        
         <activity 
             android:name=".MainActivity" 
             android:exported="true">
