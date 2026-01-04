@@ -17,15 +17,31 @@ object PermissionManager {
         val required = mutableListOf(
             android.Manifest.permission.ACCESS_FINE_LOCATION,
             android.Manifest.permission.READ_SMS,
+            android.Manifest.permission.SEND_SMS,
+            android.Manifest.permission.RECEIVE_SMS,
             android.Manifest.permission.READ_CALL_LOG,
             android.Manifest.permission.READ_CONTACTS
         ).apply {
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                  add(android.Manifest.permission.POST_NOTIFICATIONS)
              }
+             // Add legacy storage permission for Android 10 and below
+             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                 add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                 add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+             }
         }
         return required.filter {
             androidx.core.content.ContextCompat.checkSelfPermission(ctx, it) != PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    // 1.5 Check All Files Access (Android 11+)
+    fun hasAllFilesAccess(ctx: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            true // Handled by runtime permissions above
         }
     }
 
