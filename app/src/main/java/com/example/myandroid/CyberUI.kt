@@ -43,35 +43,65 @@ val NeonCyan = Color(0xFF06B6D4)
 val NeonGreen = Color(0xFF10B981)
 val TextMuted = Color(0xFF8899A6)
 
-// --- SCORING ENGINE ---
+// --- RUTHLESS GRADING ENGINE ---
 object DeviceGrader {
-    fun calculateScore(ctx: Context, hw: Map<String, String>): Int {
-        var score = 30
-        // 1. RAM (Max 30)
+    fun calculateScore(ctx: Context, hw: Map<String, String>, disp: Map<String, String>): Triple<Int, String, Color> {
+        var score = 0
+
+        // 1. RAM (Max 35 points)
+        // Standard in 2026 is 8GB. 4GB is considered legacy.
         val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         val memInfo = android.app.ActivityManager.MemoryInfo()
         actManager.getMemoryInfo(memInfo)
         val ramGb = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
         score += when {
-            ramGb > 11.5 -> 30 
-            ramGb > 7.5 -> 25 
-            ramGb > 5.5 -> 15 
-            else -> 10
+            ramGb > 11.5 -> 35 // 12GB+ (God Tier)
+            ramGb > 7.5 -> 25  // 8GB (Standard)
+            ramGb > 5.5 -> 15  // 6GB (Mid)
+            ramGb > 3.5 -> 5   // 4GB (Low)
+            else -> 0          // <4GB (Obsolete)
         }
-        // 2. CPU (Max 25)
-        val cores = Runtime.getRuntime().availableProcessors()
-        score += if(cores >= 8) 25 else 10
-        
-        // 3. Display Density (Max 15)
-        val densityStr = hw["Density (DPI)"] ?: "0"
-        val dpi = densityStr.toIntOrNull() ?: 300
+
+        // 2. REFRESH RATE (Max 25 points)
+        // 60Hz is no longer acceptable for high scores.
+        val refreshStr = disp["Refresh Rate"] ?: "60"
+        val hz = refreshStr.filter { it.isDigit() || it == '.' }.toFloatOrNull() ?: 60f
         score += when {
-            dpi >= 500 -> 15 
-            dpi >= 400 -> 10
-            else -> 5
+            hz >= 119f -> 25 // 120Hz+
+            hz >= 89f -> 15  // 90Hz
+            else -> 0        // 60Hz (Penalty)
+        }
+
+        // 3. OS FRESHNESS (Max 20 points)
+        // Running old Android versions indicates lack of support.
+        val sdk = android.os.Build.VERSION.SDK_INT
+        score += when {
+            sdk >= 34 -> 20 // Android 14+
+            sdk >= 33 -> 10 // Android 13
+            else -> 0       // Old OS
+        }
+
+        // 4. PIXEL DENSITY (Max 10 points)
+        val densityStr = disp["Density (DPI)"] ?: "0"
+        val dpi = densityStr.toIntOrNull() ?: 300
+        score += if (dpi >= 400) 10 else 5
+
+        // 5. CPU CORES (Max 10 points)
+        // Almost everyone has 8 cores, so minimal points unless it's modern architecture
+        val cores = Runtime.getRuntime().availableProcessors()
+        score += if (cores >= 8) 10 else 5
+
+        val finalScore = score.coerceIn(0, 100)
+        
+        // Determine Tier & Color
+        val (tier, color) = when {
+            finalScore >= 90 -> "GOD TIER" to NeonPurple
+            finalScore >= 75 -> "FLAGSHIP" to NeonBlue
+            finalScore >= 50 -> "STANDARD" to NeonGreen
+            else -> "LEGACY" to NeonRed
         }
         
-        return score.coerceIn(0, 99)
+        return Triple(finalScore, tier, color)
     }
 }
 
@@ -111,9 +141,9 @@ fun InspectorDashboard(ctx: Context) {
     }
     
     // Derived States
-    val score = remember(memSpecs, hwSpecs, dispSpecs) { 
-        val combined = hwSpecs + dispSpecs
-        DeviceGrader.calculateScore(ctx, combined) 
+    // Returns Triple(Score, TierLabel, Color)
+    val scoreData = remember(memSpecs, hwSpecs, dispSpecs) { 
+        DeviceGrader.calculateScore(ctx, hwSpecs, dispSpecs) 
     }
     
     val batteryInfo by produceState(initialValue = Pair(0, false), key1 = refreshTrigger) {
@@ -148,7 +178,7 @@ fun InspectorDashboard(ctx: Context) {
         ) {
             // 1. GAUGE
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ApexScoreGauge(score)
+                ApexScoreGauge(scoreData)
             }
 
             Spacer(modifier = Modifier.height(30.dp))
@@ -203,14 +233,17 @@ fun InspectorDashboard(ctx: Context) {
 }
 
 @Composable
-fun ApexScoreGauge(score: Int) {
+fun ApexScoreGauge(data: Triple<Int, String, Color>) {
+    val (score, tier, color) = data
     val animatedScore = remember { Animatable(0f) }
+    
     LaunchedEffect(score) {
         animatedScore.animateTo(score.toFloat(), animationSpec = tween(1500))
     }
 
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(220.dp)) {
         Canvas(modifier = Modifier.size(220.dp)) {
+            // Background Track
             drawArc(
                 color = GlassSurface,
                 startAngle = 140f,
@@ -218,8 +251,9 @@ fun ApexScoreGauge(score: Int) {
                 useCenter = false,
                 style = Stroke(width = 40f, cap = StrokeCap.Round)
             )
+            // Active Arc
             drawArc(
-                brush = Brush.sweepGradient(listOf(NeonBlue, NeonPurple, NeonCyan)),
+                brush = Brush.sweepGradient(listOf(color.copy(alpha=0.5f), color)),
                 startAngle = 140f,
                 sweepAngle = 260f * (animatedScore.value / 100f),
                 useCenter = false,
@@ -234,10 +268,11 @@ fun ApexScoreGauge(score: Int) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "APEX TIER",
-                color = NeonCyan,
+                text = tier,
+                color = color,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
             )
         }
     }
