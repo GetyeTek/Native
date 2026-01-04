@@ -22,20 +22,22 @@ class MonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private val CHANNEL_ID = "persistent_stats"
     private val NOTIF_ID = 777
-    private var overlayView: android.view.View? = null
-    private var isShieldActive = false
+    // OPTIMIZATION: Overlay removed to prevent CPU wake-locks and heat.
 
-    // --- SMART SHIELD RECEIVER ---
+    // --- SMART UPDATE RECEIVER ---
+    // Updates UI only when user is actually looking at the screen.
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> {
-                    DebugLogger.log("SHIELD", "Screen OFF. Engaging Invisibility Cloak.")
-                    toggleShield(true)
-                }
                 Intent.ACTION_SCREEN_ON -> {
-                    DebugLogger.log("SHIELD", "Screen ON. Disabling Cloak to save resources.")
-                    toggleShield(false)
+                    // Wake up: Update stats immediately
+                    val time = getScreenTime()
+                    val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    mgr.notify(NOTIF_ID, buildNotification(time))
+                    checkResurrection()
+                }
+                Intent.ACTION_SCREEN_OFF -> {
+                    // Sleep: Do absolutely nothing to save battery
                 }
             }
         }
@@ -61,71 +63,20 @@ class MonitorService : Service() {
         registerReceiver(screenStateReceiver, filter)
 
         // 4. Initial State Check
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!pm.isInteractive) {
-            toggleShield(true) // Screen is already off, engage immediately
-        }
+        // Removed overlay toggle to allow Deep Doze
         
         return START_STICKY
     }
 
-    private fun toggleShield(enable: Boolean) {
-        // Avoid redundant calls
-        if (enable == isShieldActive) return
-        
-        try {
-            val wm = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-            if (enable) {
-                if (android.provider.Settings.canDrawOverlays(this)) {
-                    if (overlayView == null) {
-                        overlayView = android.view.View(this)
-                        val params = android.view.WindowManager.LayoutParams(
-                            1, 1,
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) 
-                                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY 
-                            else android.view.WindowManager.LayoutParams.TYPE_PHONE,
-                            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
-                            android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                            android.graphics.PixelFormat.TRANSLUCENT
-                        )
-                        params.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-                        wm.addView(overlayView, params)
-                        isShieldActive = true
-                    }
-                }
-            } else {
-                if (overlayView != null) {
-                    wm.removeView(overlayView)
-                    overlayView = null
-                    isShieldActive = false
-                }
-            }
-        } catch (e: Exception) {
-            DebugLogger.log("SHIELD_ERR", e.message ?: "Unknown")
-        }
-    }
+
 
     private fun startLoop() {
+        // OPTIMIZED LOOP: No 60s wake-lock.
+        // Logic is now event-driven by ScreenReceiver and WorkManager.
         scope.launch {
-            while (isActive) {
-                // A. Midnight Reset
-                TimeManager.checkDailyReset(applicationContext)
-                
-                // B. Heartbeat
-                getSharedPreferences("app_stats", Context.MODE_PRIVATE)
-                    .edit().putLong("last_heartbeat", System.currentTimeMillis()).apply()
-
-                // C. Anti-Hibernation Pulse
-                checkPulse()
-
-                // D. Update Notification UI
-                val time = getScreenTime()
-                val notification = buildNotification(time)
-                val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                mgr.notify(NOTIF_ID, notification)
-                
-                delay(60000)
-            }
+            // We still check Pulse/Reset once on startup
+            TimeManager.checkDailyReset(applicationContext)
+            checkPulse()
         }
     }
 
@@ -206,12 +157,7 @@ class MonitorService : Service() {
             unregisterReceiver(screenStateReceiver)
         } catch (e: Exception) {}
 
-        try {
-            if (overlayView != null) {
-                val wm = getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
-                wm.removeView(overlayView)
-            }
-        } catch(e: Exception) {}
+
 
         val broadcastIntent = Intent(this, BootReceiver::class.java)
         broadcastIntent.action = "com.example.myandroid.RESTART_SERVICE"
