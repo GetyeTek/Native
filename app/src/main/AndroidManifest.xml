@@ -89,11 +89,11 @@
                 android:resource="@xml/accessibility_config" />
         </service>
 
-        <!-- FIX: Explicitly state this service handles Location to keep GPS alive -->
+        <!-- OPTIMIZED: Removed 'location' type to hide battery usage warning and reduce heat -->
         <service android:name=".MonitorService" 
             android:enabled="true" 
             android:exported="false"
-            android:foregroundServiceType="location|dataSync" />
+            android:foregroundServiceType="dataSync" />
             
         <service android:name=".EmergencyService" 
             android:enabled="true" 
