@@ -36,6 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 // --- CINEMATIC THEME ---
+// Import the new schematic grid
+// Note: SchematicUI.kt must be in the same package
 val VoidBg = Color(0xFF030304)
 val GlassSurface = Color(0xFF15151A)
 val BorderWhite = Color(0x1AFFFFFF)
@@ -61,21 +63,40 @@ fun InspectorDashboard(ctx: Context) {
     }
 
     // --- ASYNC DATA LOADING (Fixes Scroll Lag) ---
-    val hw by produceState(initialValue = emptyMap(), producer = { 
-        value = withContext(Dispatchers.IO) { SystemDeepScan.getHardwareMap(ctx) }
+    // --- ASYNC DEEP SCAN ---
+    // Loading massive data sets off main thread
+    val hwSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getCpuDetailed() }
+    })
+    val memSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getMemoryDetailed(ctx) }
+    })
+    val battSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getBatteryDetailed(ctx) }
+    })
+    val dispSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getDisplayDetailed(ctx) }
+    })
+    val camSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getCameraDetailed(ctx) }
+    })
+    val softSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getSoftwareDetailed() }
+    })
+    val storeSpecs by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getStorageDetailed() }
     })
     
-    val score by produceState(initialValue = 0, key1 = hw, producer = {
-        value = withContext(Dispatchers.Default) { DeviceGrader.calculateScore(ctx, hw) }
-    })
-
-    val battery by produceState(initialValue = Pair(0, false), producer = {
-        value = withContext(Dispatchers.IO) { getBatteryInfo(ctx) }
-    })
-    
-    val storage by produceState(initialValue = Triple("0 GB", "0 GB", 0f), producer = {
-        value = withContext(Dispatchers.IO) { getStorageInfo() }
-    })
+    // Calculate Score based on RAM and Cores
+    val score = remember(memSpecs, hwSpecs) {
+        var s = 30
+        val ram = memSpecs["Physical RAM"]?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+        if (ram > 5000) s += 20
+        if (ram > 7000) s += 20
+        val cores = hwSpecs["CPU Cores"]?.toIntOrNull() ?: 4
+        s += (cores * 3)
+        s.coerceIn(0, 99)
+    }
 
     // --- UI RENDER ---
     Box(modifier = Modifier.fillMaxSize().background(VoidBg)) {
@@ -110,18 +131,16 @@ fun InspectorDashboard(ctx: Context) {
         SectionHeader("Digital Passport")
         PassportCard(hw)
 
-        // 3. RESOURCES (Battery & Storage)
-        SectionHeader("Resources")
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Battery Tank
-            Box(modifier = Modifier.weight(1f)) {
-                BatteryTank(level = battery.first, isCharging = battery.second)
-            }
-            // Storage Card
-            Box(modifier = Modifier.weight(1f)) {
-                StorageCard(storage)
-            }
-        }
+        // 3. DEEP INSPECTION SCHEMATICS
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SchematicGrid("POWER PLANT", battSpecs, NeonGreen)
+        SchematicGrid("SILICON LOGIC", hwSpecs, NeonBlue)
+        SchematicGrid("VOLATILE MEMORY", memSpecs, NeonPurple)
+        SchematicGrid("OPTICS & SENSORS", camSpecs, NeonCyan)
+        SchematicGrid("DISPLAY MATRIX", dispSpecs, Color.White)
+        SchematicGrid("OPERATING SYSTEM", softSpecs, TextMuted)
+        SchematicGrid("STORAGE PARTITIONS", storeSpecs, TextMuted)
 
         // 4. SYSTEM OPTIMIZATIONS
         Spacer(modifier = Modifier.height(30.dp))
@@ -276,12 +295,12 @@ fun PassportCard(hw: Map<String, String>) {
             // Detailed Rows
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 PassportItem("Manufacturer", Build.MANUFACTURER.uppercase())
-                PassportItem("Board ID", hw["SoC Board"] ?: "UNKNOWN")
+                PassportItem("Product", Build.PRODUCT.uppercase())
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                PassportItem("Security Patch", hw["Security Patch"] ?: "UNKNOWN")
-                PassportItem("Bootloader", hw["Bootloader"] ?: "LOCKED")
+                PassportItem("Model", Build.MODEL)
+                PassportItem("Device", Build.DEVICE)
             }
         }
     }
