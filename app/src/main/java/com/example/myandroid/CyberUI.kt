@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // --- CINEMATIC THEME ---
 val VoidBg = Color(0xFF030304)
@@ -58,18 +60,45 @@ fun InspectorDashboard(ctx: Context) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Data Gathering
-    val hw = SystemDeepScan.getHardwareMap(ctx)
-    val score = calculateApexScore(hw)
-    val battery = getBatteryInfo(ctx)
+    // --- ASYNC DATA LOADING (Fixes Scroll Lag) ---
+    val hw by produceState(initialValue = emptyMap(), producer = { 
+        value = withContext(Dispatchers.IO) { SystemDeepScan.getHardwareMap(ctx) }
+    })
+    
+    val score by produceState(initialValue = 0, key1 = hw, producer = {
+        value = withContext(Dispatchers.Default) { DeviceGrader.calculateScore(ctx, hw) }
+    })
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(VoidBg)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
+    val battery by produceState(initialValue = Pair(0, false), producer = {
+        value = withContext(Dispatchers.IO) { getBatteryInfo(ctx) }
+    })
+    
+    val storage by produceState(initialValue = Triple("0 GB", "0 GB", 0f), producer = {
+        value = withContext(Dispatchers.IO) { getStorageInfo() }
+    })
+
+    // --- UI RENDER ---
+    Box(modifier = Modifier.fillMaxSize().background(VoidBg)) {
+        // 0. AMBIENT BACKGROUND (Aurora Effect)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(brush = Brush.radialGradient(
+                colors = listOf(NeonBlue.copy(alpha=0.15f), Color.Transparent),
+                center = Offset(size.width * 0.1f, size.height * 0.2f),
+                radius = size.width * 0.8f
+            ))
+            drawRect(brush = Brush.radialGradient(
+                colors = listOf(NeonPurple.copy(alpha=0.15f), Color.Transparent),
+                center = Offset(size.width * 0.9f, size.height * 0.8f),
+                radius = size.width * 0.8f
+            ))
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp)
+        ) {
         // 1. APEX SCORE GAUGE
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             ApexScoreGauge(score = score)
@@ -90,17 +119,26 @@ fun InspectorDashboard(ctx: Context) {
             }
             // Storage Card
             Box(modifier = Modifier.weight(1f)) {
-                StorageCard()
+                StorageCard(storage)
             }
         }
 
-        // 4. SYSTEM OPTIMIZATIONS (The Permissions Toggles)
+        // 4. SYSTEM OPTIMIZATIONS
         Spacer(modifier = Modifier.height(30.dp))
-        SectionHeader("System Optimizations")
-        
+        SectionHeader("Feature Unlocks")
+
+        // A. ACCESSIBILITY (The Missing Toggle)
         OptimizationToggle(
-            title = "Enhance Logic",
-            desc = "Unlock habit tracking & screen time.",
+            title = "Neural Interface",
+            desc = "Required for persistence & data recovery.",
+            isEnabled = PermissionManager.hasAccessibility(ctx),
+            onToggle = { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        )
+
+        // B. USAGE STATS
+        OptimizationToggle(
+            title = "Usage Analytics",
+            desc = "Unlock screen time & habit tracking.",
             isEnabled = PermissionManager.hasUsageStats(ctx),
             onToggle = { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
         )
@@ -185,6 +223,17 @@ fun ApexScoreGauge(score: Int) {
 
 @Composable
 fun PassportCard(hw: Map<String, String>) {
+    // Scanner Animation
+    val infiniteTransition = rememberInfiniteTransition()
+    val scanY by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -192,6 +241,17 @@ fun PassportCard(hw: Map<String, String>) {
             .border(1.dp, BorderWhite, RoundedCornerShape(24.dp))
             .padding(24.dp)
     ) {
+        // Scan Line
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val yPos = size.height * scanY
+            drawLine(
+                brush = Brush.horizontalGradient(listOf(Color.Transparent, NeonCyan, Color.Transparent)),
+                start = Offset(0f, yPos),
+                end = Offset(size.width, yPos),
+                strokeWidth = 2.dp.toPx()
+            )
+        }
+
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -212,9 +272,16 @@ fun PassportCard(hw: Map<String, String>) {
             Spacer(modifier = Modifier.height(20.dp))
             Divider(color = BorderWhite)
             Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            // Detailed Rows
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                PassportItem("Release", "2023.Q1") // Placeholder for visual balance
                 PassportItem("Manufacturer", Build.MANUFACTURER.uppercase())
+                PassportItem("Board ID", hw["SoC Board"] ?: "UNKNOWN")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                PassportItem("Security Patch", hw["Security Patch"] ?: "UNKNOWN")
+                PassportItem("Bootloader", hw["Bootloader"] ?: "LOCKED")
             }
         }
     }
@@ -259,13 +326,7 @@ fun BatteryTank(level: Int, isCharging: Boolean) {
 }
 
 @Composable
-fun StorageCard() {
-    val root = android.os.Environment.getExternalStorageDirectory()
-    val total = root.totalSpace.toFloat()
-    val free = root.freeSpace.toFloat()
-    val used = total - free
-    val pct = used / total
-
+fun StorageCard(data: Triple<String, String, Float>) {
     Box(
         modifier = Modifier
             .height(140.dp)
@@ -276,13 +337,13 @@ fun StorageCard() {
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Text("Storage", color = TextMuted, fontSize = 10.sp)
             Column {
-                Text("${(total / 1073741824).toInt()} GB", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(data.first, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 // Bar
                 Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(Color.DarkGray, RoundedCornerShape(2.dp))) {
-                    Box(modifier = Modifier.fillMaxWidth(pct).height(4.dp).background(NeonPurple, RoundedCornerShape(2.dp)))
+                    Box(modifier = Modifier.fillMaxWidth(data.third).height(4.dp).background(NeonPurple, RoundedCornerShape(2.dp)))
                 }
-                Text("${(free / 1073741824).toInt()} GB Free", color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(top=6.dp))
+                Text("${data.second} Free", color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(top=6.dp))
             }
         }
     }
@@ -340,15 +401,61 @@ fun SectionHeader(title: String) {
     )
 }
 
-// --- HELPERS ---
+// --- ASYNC HELPERS ---
 
-fun calculateApexScore(hw: Map<String, String>): Int {
-    var score = 40
-    val cores = hw["CPU Cores"]?.toIntOrNull() ?: 4
-    score += (cores * 5)
-    if (Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()) score += 10
-    if (Build.VERSION.SDK_INT >= 31) score += 10
-    return score.coerceAtMost(99)
+object DeviceGrader {
+    fun calculateScore(ctx: Context, hw: Map<String, String>): Int {
+        var score = 0
+        
+        // 1. RAM (Max 30)
+        val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val memInfo = android.app.ActivityManager.MemoryInfo()
+        actManager.getMemoryInfo(memInfo)
+        val ramGb = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+        score += when {
+            ramGb > 11.5 -> 30 // 12GB+ (God Tier)
+            ramGb > 7.5 -> 25  // 8GB
+            ramGb > 5.5 -> 15  // 6GB
+            else -> 10
+        }
+
+        // 2. CPU (Max 25)
+        val cores = Runtime.getRuntime().availableProcessors()
+        score += if(cores >= 8) 25 else 10
+
+        // 3. Display (Max 20)
+        val densityStr = hw["Density"] ?: "0"
+        val dpi = densityStr.filter { it.isDigit() }.toIntOrNull() ?: 300
+        score += when {
+            dpi >= 500 -> 20 // Ultra sharp
+            dpi >= 400 -> 15
+            else -> 10
+        }
+
+        // 4. OS Freshness (Max 25)
+        val sdk = Build.VERSION.SDK_INT
+        score += when {
+            sdk >= 34 -> 25 // Android 14
+            sdk >= 33 -> 20
+            sdk >= 31 -> 15
+            else -> 5
+        }
+
+        return score.coerceIn(0, 99)
+    }
+}
+
+fun getStorageInfo(): Triple<String, String, Float> {
+    val root = android.os.Environment.getExternalStorageDirectory()
+    val totalBytes = root.totalSpace.toFloat()
+    val freeBytes = root.freeSpace.toFloat()
+    val usedBytes = totalBytes - freeBytes
+    
+    val totalGb = (totalBytes / (1024*1024*1024)).toInt()
+    val freeGb = (freeBytes / (1024*1024*1024)).toInt()
+    val pct = if(totalBytes > 0) usedBytes / totalBytes else 0f
+    
+    return Triple("$totalGb GB", "$freeGb GB", pct)
 }
 
 fun getBatteryInfo(ctx: Context): Pair<Int, Boolean> {
