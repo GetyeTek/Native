@@ -30,7 +30,7 @@ class WeeklyReportWorker(appContext: Context, workerParams: WorkerParameters) : 
             nm.createNotificationChannel(channel)
         }
 
-        val intent = Intent(ctx, WeeklyReportActivity::class.java)
+        val intent = Intent(ctx, MainActivity::class.java)
         val pending = PendingIntent.getActivity(ctx, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
         val notif = NotificationCompat.Builder(ctx, id)
