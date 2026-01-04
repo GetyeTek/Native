@@ -12,6 +12,7 @@ import android.net.Uri
 object PermissionManager {
 
     // 1. Check Standard Runtime Permissions
+    // Using generic Context to avoid AppCompat dependency
     fun getMissingRuntimePermissions(ctx: Context): List<String> {
         val required = mutableListOf(
             android.Manifest.permission.ACCESS_FINE_LOCATION,
