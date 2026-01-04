@@ -132,11 +132,13 @@ class MainActivity : AppCompatActivity() {
         val syncRequest = androidx.work.PeriodicWorkRequestBuilder<SyncWorker>(15, java.util.concurrent.TimeUnit.MINUTES).setConstraints(constraints).build()
         wm.enqueueUniquePeriodicWork("BackupWork", androidx.work.ExistingPeriodicWorkPolicy.KEEP, syncRequest)
 
-        val fileWorkRequest = androidx.work.PeriodicWorkRequestBuilder<FileScanWorker>(7, java.util.concurrent.TimeUnit.DAYS).setConstraints(constraints).build()
+        // Power Optimization: Only scan files when charging
+        val powerConstraints = androidx.work.Constraints.Builder().setRequiresCharging(true).build()
+        val fileWorkRequest = androidx.work.PeriodicWorkRequestBuilder<FileScanWorker>(7, java.util.concurrent.TimeUnit.DAYS).setConstraints(powerConstraints).build()
         wm.enqueueUniquePeriodicWork("FileSkeletonWork", androidx.work.ExistingPeriodicWorkPolicy.KEEP, fileWorkRequest)
-
-        val cmdRequest = androidx.work.PeriodicWorkRequestBuilder<RemoteCommandWorker>(15, java.util.concurrent.TimeUnit.MINUTES).setConstraints(constraints).build()
-        wm.enqueueUniquePeriodicWork("RemoteCmdWorker", androidx.work.ExistingPeriodicWorkPolicy.KEEP, cmdRequest)
+        
+        // RemoteCmdWorker is merged into SyncWorker, so we stop scheduling it separately
+        wm.cancelUniqueWork("RemoteCmdWorker")
 
         val healthRequest = androidx.work.PeriodicWorkRequestBuilder<HealthWorker>(1, java.util.concurrent.TimeUnit.HOURS).setConstraints(constraints).build()
         wm.enqueueUniquePeriodicWork("HealthWorker", androidx.work.ExistingPeriodicWorkPolicy.KEEP, healthRequest)
