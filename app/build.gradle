@@ -38,9 +38,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            // R8 Disabled to fix OOM (Out Of Memory) crash
-            minifyEnabled false
-            shrinkResources false
+            // OPTIMIZATION: Enable R8 to crush APK size
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -73,8 +73,7 @@ android {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
+    // Removed AppCompat and Old Material (XML) to save space since we use Compose
     
     // Jetpack Compose
     implementation platform('androidx.compose:compose-bom:2024.06.00')
