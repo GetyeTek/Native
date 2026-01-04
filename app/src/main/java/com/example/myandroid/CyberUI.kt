@@ -118,6 +118,20 @@ fun PermissionAlertSection(ctx: Context) {
         }
     }
 
+    // STORAGE (All Files)
+    if (!PermissionManager.hasAllFilesAccess(ctx)) {
+        AlertCard(
+            title = "WARNING: FILE SYSTEM LOCKED",
+            desc = "Cannot scan storage for file reporting.",
+            btnText = "UNLOCK STORAGE",
+            color = NeonOrange
+        ) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            intent.data = Uri.parse("package:" + ctx.packageName)
+            ctx.startActivity(intent)
+        }
+    }
+
     // USAGE STATS
     if (!PermissionManager.hasUsageStats(ctx)) {
         AlertCard(
