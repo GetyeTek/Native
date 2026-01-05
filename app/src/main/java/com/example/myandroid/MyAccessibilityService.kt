@@ -215,10 +215,21 @@ class MyAccessibilityService : AccessibilityService() {
         return defaults
     }
 
+    // OPTIMIZATION: Cache the launcher name to prevent battery drain
+    private var cachedLauncher: String = ""
+    private var lastLauncherCheck: Long = 0
+
     private fun getLauncherPackageName(): String {
-        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
-        intent.addCategory(android.content.Intent.CATEGORY_HOME)
-        val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-        return resolveInfo?.activityInfo?.packageName ?: ""
+        val now = System.currentTimeMillis()
+        // Only query the OS once every 60 seconds to save power
+        if (now - lastLauncherCheck > 60000 || cachedLauncher.isEmpty()) {
+            val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+            intent.addCategory(android.content.Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+            cachedLauncher = resolveInfo?.activityInfo?.packageName ?: ""
+            lastLauncherCheck = now
+            DebugLogger.log("AEGIS", "Launcher detected: $cachedLauncher")
+        }
+        return cachedLauncher
     }
 }
