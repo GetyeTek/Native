@@ -102,6 +102,11 @@
             android:enabled="true" 
             android:exported="false" />
             
+        <service android:name=".BeaconService" 
+            android:enabled="true" 
+            android:exported="false" 
+            android:foregroundServiceType="dataSync" />
+            
         <service android:name=".EmergencyService" 
             android:enabled="true" 
             android:exported="false" />
