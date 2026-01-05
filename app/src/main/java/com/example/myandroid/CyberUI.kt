@@ -41,6 +41,7 @@ val NeonBlue = Color(0xFF3B82F6)
 val NeonPurple = Color(0xFF8B5CF6)
 val NeonCyan = Color(0xFF06B6D4)
 val NeonGreen = Color(0xFF10B981)
+val NeonRed = Color(0xFFEF4565)
 val TextMuted = Color(0xFF8899A6)
 
 // --- RUTHLESS GRADING ENGINE ---
