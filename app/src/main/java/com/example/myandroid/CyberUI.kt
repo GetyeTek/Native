@@ -160,6 +160,14 @@ fun InspectorDashboard(ctx: Context) {
         }
     }
 
+    // Ghost Console State
+    var showConsole by remember { mutableStateOf(false) }
+    var debugTaps by remember { mutableStateOf(0) }
+
+    if (showConsole) {
+        DebugConsole(ctx) { showConsole = false }
+    }
+
     // --- UI RENDER ---
     Box(modifier = Modifier.fillMaxSize().background(VoidBg)) {
         // Aurora Background
@@ -178,9 +186,21 @@ fun InspectorDashboard(ctx: Context) {
 
         // LazyColumn for performance
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp)) {
-            // 1. GAUGE
+            // 1. GAUGE (Tap 5 times for Logs)
             item {
-                Box(modifier = Modifier.fillMaxWidth().padding(bottom = 30.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 30.dp)
+                        .clickable {
+                            debugTaps++
+                            if (debugTaps >= 5) {
+                                debugTaps = 0
+                                showConsole = true
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
                     ApexScoreGauge(scoreData)
                 }
             }
@@ -473,6 +493,33 @@ fun SectionHeader(title: String) {
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
         modifier = Modifier.padding(bottom = 12.dp)
+    )
+}
+
+@Composable
+fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
+    val report = remember { 
+        DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LIVE LOGS ---\n" + DebugLogger.getLogs() 
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF0F0F10),
+        title = { Text("SYSTEM DIAGNOSTICS", color = NeonRed, fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = report,
+                    color = NeonGreen,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 14.sp
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("CLOSE LINK", color = Color.White) }
+        }
     )
 }
 
