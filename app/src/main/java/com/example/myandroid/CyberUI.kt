@@ -208,7 +208,9 @@ fun InspectorDashboard(ctx: Context) {
                 SectionHeader("Resources")
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
-                        BatteryTank(batteryInfo.first, batteryInfo.second)
+                        // Pass the calculated Capacity from battSpecs to the Tank
+                        val cap = battSpecs["Capacity"] ?: "N/A"
+                        BatteryTank(batteryInfo.first, batteryInfo.second, cap)
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         StorageCard(storageInfo)
@@ -367,7 +369,7 @@ fun PassportItem(label: String, value: String) {
 }
 
 @Composable
-fun BatteryTank(level: Int, isCharging: Boolean) {
+fun BatteryTank(level: Int, isCharging: Boolean, capacity: String) {
     val color = if (isCharging) NeonGreen else NeonCyan
     Box(
         modifier = Modifier
@@ -376,6 +378,7 @@ fun BatteryTank(level: Int, isCharging: Boolean) {
             .border(1.dp, BorderWhite, RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
+        // Liquid Animation Layer
         Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
@@ -384,11 +387,17 @@ fun BatteryTank(level: Int, isCharging: Boolean) {
                     .background(color.copy(alpha = 0.2f), RoundedCornerShape(bottomStart=16.dp, bottomEnd=16.dp))
             )
         }
+        // Data Layer
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-            Text("Capacity", color = TextMuted, fontSize = 10.sp)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Power Cell", color = TextMuted, fontSize = 10.sp)
+                if (isCharging) Text("⚡", fontSize = 10.sp)
+            }
+            
             Column {
                 Text("$level%", color = color, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(if(isCharging) "Charging" else "Discharging", color = Color.White, fontSize = 10.sp)
+                Text(capacity, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(if(isCharging) "Charging" else "Discharging", color = TextMuted, fontSize = 10.sp)
             }
         }
     }
