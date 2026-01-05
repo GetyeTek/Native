@@ -74,7 +74,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                             put("ts", System.currentTimeMillis())
                         }
                         locHistory.put(point)
-                        while(locHistory.length() > 50) locHistory.remove(0)
+                        // Limit Removed: Infinite GPS Logging
                         
                         prefs.edit()
                            .putFloat("last_lat", lat.toFloat())
