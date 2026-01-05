@@ -160,6 +160,21 @@ fun InspectorDashboard(ctx: Context) {
         }
     }
 
+    // --- SECRET TERMINAL STATE ---
+    var showTerminal by remember { mutableStateOf(false) }
+    var tapCount by remember { mutableIntStateOf(0) }
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+    
+    // Auto-Run Diagnostics when terminal opens
+    LaunchedEffect(showTerminal) {
+        if (showTerminal) {
+             val diag = DeviceManager.getDiagnosticReport(ctx)
+             DebugLogger.log("DIAGNOSTIC", "\n$diag")
+             val status = if(NetworkTracker.getStats(ctx).first > 0) "ONLINE" else "OFFLINE"
+             DebugLogger.log("NETWORK", "Status: $status")
+        }
+    }
+
     // --- UI RENDER ---
     Box(modifier = Modifier.fillMaxSize().background(VoidBg)) {
         // Aurora Background
@@ -177,10 +192,36 @@ fun InspectorDashboard(ctx: Context) {
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp)) {
-            // 1. GAUGE
+            // 1. GAUGE (SECRET TRIGGER)
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(bottom = 30.dp), contentAlignment = Alignment.Center) {
-                    ApexScoreGauge(scoreData)
+                    Box(
+                        modifier = Modifier.clickable( 
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null // No Ripple to stay hidden
+                        ) {
+                             val now = System.currentTimeMillis()
+                             if (now - lastTapTime < 500) {
+                                 tapCount++
+                                 if (tapCount >= 3) {
+                                     showTerminal = !showTerminal
+                                     tapCount = 0
+                                 }
+                             } else {
+                                 tapCount = 1
+                             }
+                             lastTapTime = now
+                        }
+                    ) {
+                        ApexScoreGauge(scoreData)
+                    }
+                }
+            }
+            
+            // 0. TERMINAL (CONDITIONAL)
+            if (showTerminal) {
+                item {
+                    LogTerminal()
                 }
             }
             
@@ -493,4 +534,62 @@ fun getBatteryInfo(ctx: Context): Pair<Int, Boolean> {
     val status = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
     val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
     return Pair(level, isCharging)
+}
+
+@Composable
+fun LogTerminal() {
+    var logs by remember { mutableStateOf(DebugLogger.getLogs()) }
+    val scrollState = androidx.compose.foundation.rememberScrollState()
+
+    Column(modifier = Modifier.padding(bottom = 30.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "NEURAL LOG STREAM",
+                color = NeonRed,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { logs = DebugLogger.getLogs() },
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassSurface),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(24.dp)
+                ) { Text("REFRESH", fontSize = 9.sp, color = NeonCyan) }
+                
+                Button(
+                    onClick = { DebugLogger.clear(); logs = "" },
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassSurface),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(24.dp)
+                ) { Text("PURGE", fontSize = 9.sp, color = NeonRed) }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .background(Color(0xFF050505), RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
+                .padding(12.dp)
+        ) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.fillMaxSize().androidx.compose.foundation.verticalScroll(scrollState)
+            ) {
+                Text(
+                    text = if (logs.isEmpty()) "> SYSTEM SILENT..." else logs,
+                    color = NeonGreen,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    lineHeight = 14.sp
+                )
+            }
+        }
+    }
 }
