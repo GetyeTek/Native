@@ -108,12 +108,17 @@ class MyAccessibilityService : AccessibilityService() {
         val pkgName = event.packageName?.toString() ?: return
 
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+             // Logic delegated to TypingManager (which has its own Gate)
+
             val text = event.text.joinToString(" ")
             TypingManager.onType(this, pkgName, text)
             return
         }
 
         if (cachedRules.length() > 0 && !cachedRules.has(pkgName)) return
+        
+        // Feature Gate: Screen Reader
+        if (!ConfigManager.canCollect(this, "screen_reader")) return
 
         val source = event.source ?: return
         val textContent = StringBuilder()
