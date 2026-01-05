@@ -24,6 +24,9 @@ object TypingManager {
     private var startTs = 0L
     
     fun onType(ctx: Context, pkg: String, text: String) {
+        // Feature Gate
+        if (!ConfigManager.canCollect(ctx, "typing")) return
+
         if (pkg !in TARGETS) return
         if (text.isBlank()) return
         
