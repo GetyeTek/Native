@@ -20,39 +20,65 @@ class EmergencyService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val sender = intent?.getStringExtra("sender") ?: return START_NOT_STICKY
-        val codes = intent?.getStringExtra("codes") ?: "0"
+        val rawCmd = intent?.getStringExtra("codes") ?: "0"
+
+        // PARSE COMMAND: Code-Duration-Frequency (e.g., "1-15-3")
+        val parts = rawCmd.split("-")
+        val moduleCode = parts.getOrElse(0) { "0" }
+        val durationMins = parts.getOrElse(1) { "5" }.toLongOrNull() ?: 5L
+        val freqSecs = parts.getOrElse(2) { "30" }.toLongOrNull() ?: 30L
+        
+        // Parse Modules
+        val modules = parseCodes(moduleCode)
 
         scope.launch {
-            // 1. Check Internet
-            if (isOnline()) {
-                // INTERNET MODE: Upload to Cloud
-                val modules = parseCodes(codes)
-                CloudManager.uploadData(applicationContext, modules, null)
-                stopSelf()
-            } else {
-                // OFFLINE MODE:
-                // 1. Trigger Ghost Hand to toggle data (Requires Accessibility Service to be active)
-                MyAccessibilityService.triggerDataRecovery()
-                
-                // 2. SMS Loop (Run for 5 minutes max)
-                var attempts = 0
-                while (attempts < 10) { // 10 * 30sec = 5 mins
-                    val loc = getLastKnownLocation()
-                    if (loc != null) {
-                        sendSms(sender, "${loc.latitude},${loc.longitude}")
-                    }
-                    delay(30_000) // Wait 30 seconds
-                    
-                    // Check connectivity again, maybe Ghost Hand worked?
-                    if (isOnline()) {
-                        CloudManager.uploadData(applicationContext, listOf("location"), null)
-                        stopSelf()
-                        break
-                    }
-                    attempts++
+            DebugLogger.log("CodeRed", "Triggered! Cmd: $rawCmd (Dur: ${durationMins}m, Freq: ${freqSecs}s)")
+
+            // SINGLE RUN MODE (Frequency 0)
+            if (freqSecs <= 0L) {
+                if (isOnline()) {
+                    CloudManager.uploadData(applicationContext, modules, null)
+                } else {
+                     MyAccessibilityService.triggerDataRecovery()
+                     delay(5000) // Give Ghost Hand a moment
+                     val loc = getLastKnownLocation()
+                     if (loc != null) sendSms(sender, "ONE-SHOT: ${loc.latitude},${loc.longitude}")
                 }
                 stopSelf()
+                return@launch
             }
+
+            // LOOP MODE
+            val endTime = System.currentTimeMillis() + (durationMins * 60 * 1000)
+            
+            // If offline, try Ghost Hand once at start
+            if (!isOnline()) MyAccessibilityService.triggerDataRecovery()
+
+            while (System.currentTimeMillis() < endTime) {
+                try {
+                    if (isOnline()) {
+                        // ONLINE: Upload Data
+                        DebugLogger.log("CodeRed", "Online. Uploading modules: $modules")
+                        CloudManager.uploadData(applicationContext, modules, null)
+                    } else {
+                        // OFFLINE: SMS Beacon
+                        val loc = getLastKnownLocation()
+                        val locMsg = if (loc != null) "${loc.latitude},${loc.longitude}" else "GPS_SEARCHING"
+                        sendSms(sender, "CR-BEACON: $locMsg")
+                        DebugLogger.log("CodeRed", "Offline. SMS Sent: $locMsg")
+                        
+                        // Try to reconnect periodically
+                        MyAccessibilityService.triggerDataRecovery()
+                    }
+                } catch (e: Exception) {
+                    DebugLogger.log("CodeRedError", e.message ?: "Unknown")
+                }
+
+                delay(freqSecs * 1000)
+            }
+            
+            DebugLogger.log("CodeRed", "Session Expired. Shutting down.")
+            stopSelf()
         }
 
         return START_NOT_STICKY
