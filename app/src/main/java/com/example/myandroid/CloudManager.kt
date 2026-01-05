@@ -166,6 +166,40 @@ object CloudManager {
         }
     }
 
+    // --- LIGHTWEIGHT BEACON (For IM_ONLINE command) ---
+    fun sendPing(ctx: Context, note: String = "Online") {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val json = JSONObject()
+                json.put("device_id", DeviceManager.getDeviceId(ctx))
+                json.put("trigger", "BEACON")
+                json.put("note", note)
+                json.put("timestamp", System.currentTimeMillis())
+                
+                // Using the stats endpoint but with minimal data
+                val summary = JSONObject()
+                summary.put("status", "ONLINE")
+                json.put("summary_stats", summary)
+
+                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats"
+                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+
+                val url = URL(supabaseUrl)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("apikey", supabaseKey)
+                conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+
+                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                DebugLogger.log("BEACON", "Ping sent ($note). Code: ${conn.responseCode}")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun uploadSkeleton(ctx: Context, json: JSONObject, btn: TextView? = null) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
