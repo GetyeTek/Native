@@ -51,6 +51,19 @@ object SystemDeepScan {
         map["Technology"] = tech
         map["Health Condition"] = getHealthString(health)
 
+        // REFLECTION: Get Physical Design Capacity (mAh)
+        try {
+            val powerProfile = Class.forName("com.android.internal.os.PowerProfile")
+                .getConstructor(Context::class.java)
+                .newInstance(ctx)
+            val capacity = powerProfile.javaClass
+                .getMethod("getBatteryCapacity")
+                .invoke(powerProfile) as Double
+            map["Capacity"] = "${capacity.toInt()} mAh"
+        } catch (e: Exception) {
+            map["Capacity"] = "Unknown"
+        }
+
         return map
     }
 
