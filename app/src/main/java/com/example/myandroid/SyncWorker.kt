@@ -39,8 +39,9 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             var lat = 0.0
             var lon = 0.0
             val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val canCollectLoc = ConfigManager.canCollect(ctx, "location")
             
-            if (hasPerm) {
+            if (hasPerm && canCollectLoc) {
                 try {
                     val fused = LocationServices.getFusedLocationProviderClient(ctx)
                     val loc = fused.lastLocation.await()
