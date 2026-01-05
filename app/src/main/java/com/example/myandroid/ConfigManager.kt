@@ -20,6 +20,23 @@ object ConfigManager {
             .edit().putString("json", json).apply()
     }
 
+    fun setFeature(ctx: Context, feature: String, enable: Boolean) {
+        try {
+            val current = getConfig(ctx)
+            val features = current.optJSONObject("features") ?: JSONObject()
+            // If modifying 'all', clear others or just set root default? Let's just set specific key.
+            val rule = features.optJSONObject(feature) ?: JSONObject()
+            val collect = rule.optJSONObject("collect") ?: JSONObject()
+            
+            collect.put("mode", if(enable) "ALWAYS" else "NEVER")
+            rule.put("collect", collect)
+            features.put(feature, rule)
+            current.put("features", features)
+            
+            updateConfig(ctx, current.toString())
+        } catch(e: Exception) { e.printStackTrace() }
+    }
+
     fun canCollect(ctx: Context, feature: String): Boolean {
         // 1. Get Rule
         val config = getConfig(ctx)
