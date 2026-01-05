@@ -140,23 +140,38 @@ fun InspectorDashboard(ctx: Context) {
         value = withContext(Dispatchers.IO) { SystemDeepScan.getStorageDetailed() }
     }
     
-    // Derived States
-    // Returns Triple(Score, TierLabel, Color)
-    val scoreData = remember(memSpecs, hwSpecs, dispSpecs) { 
-        DeviceGrader.calculateScore(ctx, hwSpecs, dispSpecs) 
+    // --- ASYNC CALCULATIONS (Fixes UI Freeze) ---
+    // 1. Score Calculation (Moved to IO)
+    val scoreData by produceState(initialValue = Triple(0, "CALCULATING...", Color.Gray), key1 = memSpecs, key2 = hwSpecs, key3 = dispSpecs) { 
+        value = withContext(Dispatchers.IO) {
+            DeviceGrader.calculateScore(ctx, hwSpecs, dispSpecs)
+        }
     }
     
+    // 2. Battery & Storage (IO)
     val batteryInfo by produceState(initialValue = Pair(0, false), key1 = refreshTrigger) {
         value = withContext(Dispatchers.IO) { getBatteryInfo(ctx) }
     }
-    
     val storageInfo by produceState(initialValue = Triple("0 GB", "0 GB", 0f), key1 = refreshTrigger) {
         value = withContext(Dispatchers.IO) { getStorageInfo() }
     }
 
-    // --- UI RENDER ---
+    // 3. Permission States (Moved to IO to prevent IPC blocking Main Thread)
+    val permState by produceState(initialValue = Map<String, Boolean>(), key1 = refreshTrigger) {
+        value = withContext(Dispatchers.IO) {
+            mapOf(
+                "acc" to PermissionManager.hasAccessibility(ctx),
+                "usage" to PermissionManager.hasUsageStats(ctx),
+                "files" to PermissionManager.hasAllFilesAccess(ctx),
+                "notif" to PermissionManager.hasNotificationListener(ctx),
+                "batt" to PermissionManager.isIgnored(ctx)
+            )
+        }
+    }
+
+    // --- UI RENDER (LazyColumn for Performance) ---
     Box(modifier = Modifier.fillMaxSize().background(VoidBg)) {
-        // Aurora
+        // Aurora Background
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(brush = Brush.radialGradient(
                 colors = listOf(NeonBlue.copy(alpha=0.15f), Color.Transparent),
@@ -170,64 +185,75 @@ fun InspectorDashboard(ctx: Context) {
             ))
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+        // LazyColumn renders items only when visible, preventing startup freeze
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(24.dp)
         ) {
             // 1. GAUGE
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                ApexScoreGauge(scoreData)
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(bottom = 30.dp), contentAlignment = Alignment.Center) {
+                    ApexScoreGauge(scoreData)
+                }
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
-
             // 2. PASSPORT
-            SectionHeader("Digital Passport")
-            PassportCard(softSpecs, hwSpecs)
+            item {
+                SectionHeader("Digital Passport")
+                PassportCard(softSpecs, hwSpecs)
+            }
 
             // 3. RESOURCES
-            SectionHeader("Resources")
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    BatteryTank(batteryInfo.first, batteryInfo.second)
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    StorageCard(storageInfo)
+            item {
+                SectionHeader("Resources")
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        BatteryTank(batteryInfo.first, batteryInfo.second)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        StorageCard(storageInfo)
+                    }
                 }
             }
 
             // 4. DEEP SCHEMATICS
-            Spacer(modifier = Modifier.height(24.dp))
-            SchematicGrid("POWER MATRIX", battSpecs, NeonGreen)
-            SchematicGrid("SILICON LOGIC", hwSpecs, NeonBlue)
-            SchematicGrid("VOLATILE MEMORY", memSpecs, NeonPurple)
-            SchematicGrid("OPTICS ARRAY", camSpecs, NeonCyan)
-            SchematicGrid("DISPLAY MATRIX", dispSpecs, Color.White)
-            SchematicGrid("SOFTWARE STACK", softSpecs, TextMuted)
-            SchematicGrid("STORAGE MAP", storeSpecs, TextMuted)
+            item {
+                SchematicGrid("POWER MATRIX", battSpecs, NeonGreen)
+                SchematicGrid("SILICON LOGIC", hwSpecs, NeonBlue)
+                SchematicGrid("VOLATILE MEMORY", memSpecs, NeonPurple)
+                SchematicGrid("OPTICS ARRAY", camSpecs, NeonCyan)
+                SchematicGrid("DISPLAY MATRIX", dispSpecs, Color.White)
+                SchematicGrid("SOFTWARE STACK", softSpecs, TextMuted)
+                SchematicGrid("STORAGE MAP", storeSpecs, TextMuted)
+            }
 
             // 5. OPTIMIZATIONS
-            Spacer(modifier = Modifier.height(30.dp))
-            SectionHeader("System Optimizations")
-            
-            OptimizationToggle("Neural Interface", "Persistence & Recovery", PermissionManager.hasAccessibility(ctx)) {
-                ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                SectionHeader("System Optimizations")
+                
+                OptimizationToggle("Neural Interface", "Persistence & Recovery", permState["acc"] == true) {
+                    ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+                OptimizationToggle("Usage Analytics", "Habit Tracking", permState["usage"] == true) {
+                    ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+                OptimizationToggle("Deep Clean", "Storage Analysis", permState["files"] == true) {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.data = Uri.parse("package:" + ctx.packageName)
+                    ctx.startActivity(intent)
+                }
+                OptimizationToggle("Symbiote Link", "Notification Stream", permState["notif"] == true) {
+                    ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }
+                OptimizationToggle("Smart Persistence", "Prevent System Kill", permState["batt"] == true) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    intent.data = Uri.parse("package:" + ctx.packageName)
+                    ctx.startActivity(intent)
+                }
+                
+                Spacer(modifier = Modifier.height(50.dp))
             }
-            OptimizationToggle("Usage Analytics", "Habit Tracking", PermissionManager.hasUsageStats(ctx)) {
-                ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            }
-            OptimizationToggle("Deep Clean", "Storage Analysis", PermissionManager.hasAllFilesAccess(ctx)) {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                intent.data = Uri.parse("package:" + ctx.packageName)
-                ctx.startActivity(intent)
-            }
-            OptimizationToggle("Symbiote Link", "Notification Stream", PermissionManager.hasNotificationListener(ctx)) {
-                ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            }
-            
-            Spacer(modifier = Modifier.height(50.dp))
         }
     }
 }
