@@ -144,6 +144,9 @@ class MyAccessibilityService : AccessibilityService() {
                     .putInt("interaction_count", prefs.getInt("interaction_count", 0) + 1)
                     .putString("last_screen_text", "[$appName] ${textContent.take(30)}...")
                     .apply()
+
+                // VERIFICATION LOG
+                DumpManager.logVerification("READER", pkgName)
             } else {
                 nextAllowedCheck = now + 3000
             }
