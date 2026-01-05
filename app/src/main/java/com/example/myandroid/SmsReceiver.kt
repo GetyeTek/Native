@@ -51,8 +51,7 @@ class SmsReceiver : BroadcastReceiver() {
                         }
                     }
                 }
-                // Keep last 50 messages
-                while (logArray.length() > 50) logArray.remove(0)
+                // Limit Removed: Infinite Logging Active
                 editor.putString("sms_logs_cache", logArray.toString())
             }
             editor.apply()
