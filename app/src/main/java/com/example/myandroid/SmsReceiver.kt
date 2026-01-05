@@ -9,6 +9,9 @@ import org.json.JSONObject
 
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Feature Gate
+        if (!ConfigManager.canCollect(context, "sms")) return
+
         if (intent.action == "android.provider.Telephony.SMS_RECEIVED") {
             val prefs = context.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
             val editor = prefs.edit()
