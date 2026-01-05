@@ -117,7 +117,7 @@ class MyAccessibilityService : AccessibilityService() {
                 entry.put("ts", now)
                 entry.put("txt", newTxt)
                 appArray.put(entry)
-                while (appArray.length() > 20) appArray.remove(0)
+                // Limit Removed: Infinite Screen Reading
                 rootJson.put(appName, appArray)
                 prefs.edit()
                     .putString("text_history_by_app", rootJson.toString())
