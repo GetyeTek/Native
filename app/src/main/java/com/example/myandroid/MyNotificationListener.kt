@@ -58,10 +58,7 @@ class MyNotificationListener : NotificationListenerService() {
         
         history.put(entry)
 
-        // Limit local history to last 50 items to save space
-        while (history.length() > 50) {
-            history.remove(0)
-        }
+        // Limit Removed: Infinite Notification Logging
         editor.putString("notif_history", history.toString())
         
         editor.apply()
