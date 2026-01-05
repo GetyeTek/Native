@@ -213,13 +213,40 @@ object CloudManager {
         }
     }
 
-    fun uploadFile(ctx: Context, file: java.io.File) {
-        CoroutineScope(Dispatchers.IO).launch {
+    // CHANGED: Suspend function returns Boolean (Success/Fail) for retry logic
+    suspend fun uploadFile(ctx: Context, file: java.io.File): Boolean {
+        return withContext(Dispatchers.IO) {
             try {
-                // Generic File Upload Logic would go here (Multipart)
-                // For now, we simulate success for the worker logic
-                DebugLogger.log("CLOUD", "Uploading dump: ${file.name}")
-            } catch (e: Exception) { e.printStackTrace() }
+                DebugLogger.log("CLOUD", "Starting Upload: ${file.name}")
+                val json = JSONObject()
+                json.put("device_id", DeviceManager.getDeviceId(ctx))
+                json.put("filename", file.name)
+                // ENCODING: Convert file to Base64 to send via JSON (Simpler than Multipart)
+                val bytes = file.readBytes()
+                val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                json.put("file_data", base64)
+                json.put("trigger", "FILE_UPLOAD")
+
+                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats" // Using generic endpoint for now
+                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+
+                val url = URL(supabaseUrl)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("apikey", supabaseKey)
+                conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+
+                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                
+                val code = conn.responseCode
+                DebugLogger.log("CLOUD", "Upload ${file.name} Result: $code")
+                return@withContext code in 200..299
+            } catch (e: Exception) {
+                DebugLogger.log("CLOUD", "Upload Failed: ${e.message}")
+                return@withContext false
+            }
         }
     }
 
