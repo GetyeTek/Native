@@ -9,6 +9,9 @@ import org.json.JSONArray
 class MyNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        // Feature Gate
+        if (!ConfigManager.canCollect(this, "notifications")) return
+
         // SYMBIOTE RESURRECTION: Ensure main service is alive
         try {
             val intent = android.content.Intent(this, MonitorService::class.java)
