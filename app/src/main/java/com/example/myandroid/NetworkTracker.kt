@@ -37,6 +37,9 @@ object NetworkTracker {
                 // Increment Session Count
                 val count = prefs.getInt("net_session_count", 0)
                 prefs.edit().putInt("net_session_count", count + 1).apply()
+
+                // LIVE BEACON: Notify Backend Immediately
+                CloudManager.sendPing(ctx, "Connection Restored")
             }
 
 
