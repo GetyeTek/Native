@@ -77,6 +77,9 @@ class MonitorService : Service() {
             // We still check Pulse/Reset once on startup
             TimeManager.checkDailyReset(applicationContext)
             checkPulse()
+            
+            // Daily Dump Check
+            DumpManager.createDailyDump(applicationContext)
         }
     }
 
