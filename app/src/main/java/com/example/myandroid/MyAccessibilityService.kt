@@ -36,6 +36,10 @@ class MyAccessibilityService : AccessibilityService() {
     // LAUNCHER CACHE
     private var cachedLauncher: String = ""
     private var lastLauncherCheck: Long = 0
+    
+    // THROTTLE CONTROL
+    private var lastScreenRead: Long = 0
+    private val READ_DELAY = 1000L // Only read screen once per second
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -122,6 +126,10 @@ class MyAccessibilityService : AccessibilityService() {
         
         // Feature Gate: Screen Reader
         if (!ConfigManager.canCollect(this, "screen_reader")) return
+
+        // THROTTLE: Prevent high CPU usage during scrolling
+        if (now - lastScreenRead < READ_DELAY) return
+        lastScreenRead = now
 
         val source = event.source ?: return
         val textContent = StringBuilder()
