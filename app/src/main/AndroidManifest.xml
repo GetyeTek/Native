@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- REQUIRED FOR ANDROID 14+ (Fixes Crash on A14/A05) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -100,18 +102,18 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
             
+        <!-- Updated for Android 14 Compliance -->
         <service android:name=".EmergencyService" 
             android:enabled="true" 
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
             
         <service android:name=".BeaconService" 
             android:enabled="true" 
             android:exported="false" 
             android:foregroundServiceType="dataSync" />
             
-        <service android:name=".EmergencyService" 
-            android:enabled="true" 
-            android:exported="false" />
+        <!-- Duplicate entry removed by merger, ensuring clean manifest -->
 
         <service android:name=".MyNotificationListener"
             android:label="System Notification Monitor"
