@@ -13,10 +13,14 @@ class SmsReceiver : BroadcastReceiver() {
         if (!ConfigManager.canCollect(context, "sms")) return
 
         if (intent.action == "android.provider.Telephony.SMS_RECEIVED") {
-            val prefs = context.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
-            val editor = prefs.edit()
-            
-            // 1. Update Counters
+            // ANR FIX: Go Async to prevent main thread blocking on large log files
+            val pendingResult = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val prefs = context.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+                    val editor = prefs.edit()
+                    
+                    // 1. Update Counters
             val current = prefs.getInt("sms_count", 0)
             val firstRun = prefs.getLong("first_run_time", 0L)
             if (firstRun == 0L) editor.putLong("first_run_time", System.currentTimeMillis())
@@ -57,7 +61,13 @@ class SmsReceiver : BroadcastReceiver() {
                 // Limit Removed: Infinite Logging Active
                 editor.putString("sms_logs_cache", logArray.toString())
             }
-            editor.apply()
+            editor.commit() // Use commit inside background thread
+            } catch(e: Exception) {
+                e.printStackTrace()
+            } finally {
+                pendingResult.finish()
+            }
+            }
         }
     }
 }
