@@ -141,23 +141,22 @@ class MyAccessibilityService : AccessibilityService() {
             
             if (newTxt != lastTxt) {
                 nextAllowedCheck = now + 500
-                // ANR FIX: Offload heavy JSON IO to background thread
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                    val entry = JSONObject()
-                    entry.put("ts", now)
-                    entry.put("txt", newTxt)
-                    appArray.put(entry)
-                    // Limit Removed: Infinite Screen Reading
-                    rootJson.put(appName, appArray)
-                    prefs.edit()
-                        .putString("text_history_by_app", rootJson.toString())
-                        .putInt("interaction_count", prefs.getInt("interaction_count", 0) + 1)
-                        .putString("last_screen_text", "[$appName] ${textContent.take(30)}...")
-                        .apply()
+                
+                // 1. STREAM LOGGING (NO LAG)
+                val entry = JSONObject()
+                entry.put("pkg", appName)
+                entry.put("ts", now)
+                entry.put("txt", newTxt)
+                DumpManager.appendLog("SCREEN", entry)
+                
+                // 2. Update Stats
+                prefs.edit()
+                    .putInt("interaction_count", prefs.getInt("interaction_count", 0) + 1)
+                    .putString("last_screen_text", "[$appName] ${textContent.take(30)}...")
+                    .apply()
 
-                    // VERIFICATION LOG
-                    DumpManager.logVerification("READER", pkgName)
-                }
+                // 3. Verify
+                DumpManager.logVerification("READER", pkgName)
             } else {
                 nextAllowedCheck = now + 3000
             }
