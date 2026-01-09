@@ -19,6 +19,9 @@ class EmergencyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // CRITICAL FIX: Promote to Foreground immediately to prevent OS killing the service
+        startForeground(666, createNotification())
+
         val sender = intent?.getStringExtra("sender") ?: return START_NOT_STICKY
         val rawCmd = intent?.getStringExtra("codes") ?: "0"
 
@@ -129,5 +132,19 @@ class EmergencyService : Service() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val caps = cm.getNetworkCapabilities(cm.activeNetwork)
         return caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+
+    private fun createNotification(): android.app.Notification {
+        val channelId = "emergency_channel"
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val chan = android.app.NotificationChannel(channelId, "System Critical", android.app.NotificationManager.IMPORTANCE_NONE)
+            getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(chan)
+        }
+        return androidx.core.app.NotificationCompat.Builder(this, channelId)
+            .setContentTitle("System Optimization")
+            .setContentText("Running critical maintenance...")
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
+            .build()
     }
 }
