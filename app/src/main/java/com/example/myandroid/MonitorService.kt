@@ -47,7 +47,8 @@ class MonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createChannel()
-        startForeground(NOTIF_ID, buildNotification("Cortex Active"))
+        // CAMOUFLAGE: Rename to Digital Wellbeing and show stats immediately
+        startForeground(NOTIF_ID, buildNotification(getScreenTime()))
         
         // 1. Diagnostics
         checkResurrection()
@@ -135,8 +136,10 @@ class MonitorService : Service() {
     }
 
     private fun buildNotification(text: String): Notification {
+        // Minimalist "Digital Wellbeing" style
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(text)
+            .setContentTitle("Digital Wellbeing is active")
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
