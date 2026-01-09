@@ -199,10 +199,10 @@ fun InspectorDashboard(ctx: Context) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            // FIXED: Set width to 300dp (Half-ish) and specific colors
+            // FIXED: Width reduced to 240dp (~60%) for better UX
             ModalDrawerSheet(
                 drawerContainerColor = drawerBg,
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier.width(240.dp)
             ) {
                 Text(
                     "CORTEX TOOLS", 
@@ -213,25 +213,35 @@ fun InspectorDashboard(ctx: Context) {
                 )
                 Divider(color = BorderWhite)
                 
-                // Theme Toggle
+                // Theme Toggle (Fixed Contrast)
                 NavigationDrawerItem(
-                    label = { Text("THEME: ${if(isDarkTheme) "DARK" else "LIGHT"}", color = if(isDarkTheme) Color.White else Color.Black) },
+                    label = { Text("THEME: ${if(isDarkTheme) "DARK" else "LIGHT"}") },
                     selected = false,
                     onClick = { isDarkTheme = !isDarkTheme },
                     icon = { Text(if(isDarkTheme) "🌙" else "☀️") },
-                    modifier = Modifier.padding(10.dp)
+                    modifier = Modifier.padding(10.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedTextColor = if(isDarkTheme) Color.White else Color.Black,
+                        unselectedIconColor = if(isDarkTheme) Color.White else Color.Black
+                    )
                 )
 
-                // Dump Log Button
+                // Dump Log Button (Fixed Contrast)
                 NavigationDrawerItem(
-                    label = { Text("GENERATE DUMP (SECURE)", color = NeonRed, fontWeight = FontWeight.Bold) },
+                    label = { Text("GENERATE DUMP", fontWeight = FontWeight.Bold) },
                     selected = false,
                     onClick = { 
                         scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
                         scope.launch { drawerState.close() }
                     },
                     icon = { Text("🔒") },
-                    modifier = Modifier.padding(10.dp)
+                    modifier = Modifier.padding(10.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedTextColor = NeonRed,
+                        unselectedIconColor = NeonRed
+                    )
                 )
             }
         }
