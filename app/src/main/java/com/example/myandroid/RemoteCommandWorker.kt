@@ -15,6 +15,13 @@ import java.net.URL
 class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        // Delegate all logic to the central CommandProcessor
+        CommandProcessor.checkAndExecute(applicationContext)
+        return Result.success()
+    }
+
+    /* LEGACY CODE REMOVED TO PREVENT DUPLICATION
+    override suspend fun doWork_OLD(): Result {
         return withContext(Dispatchers.IO) {
             try {
                 // 1. Check Permission
