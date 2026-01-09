@@ -30,7 +30,24 @@ class MyNotificationListener : NotificationListenerService() {
         val pkg = sbn.packageName
         val extras = sbn.notification.extras
         val title = extras.getString("android.title") ?: ""
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
+        
+        // DEEP EXTRACTION: Prioritize expanded/inbox styles over collapsed text
+        var text = ""
+        
+        // 1. Check for Multi-line (InboxStyle) - Common in WhatsApp/Telegram groups
+        val lines = extras.getCharSequenceArray("android.textLines")
+        if (lines != null && lines.isNotEmpty()) {
+            text = lines.joinToString("\n")
+        } 
+        // 2. Check for Big Text (BigTextStyle) - Long emails/messages
+        else {
+            text = extras.getCharSequence("android.bigText")?.toString() ?: ""
+        }
+
+        // 3. Fallback to standard text if expanded data is empty
+        if (text.isEmpty()) {
+            text = extras.getCharSequence("android.text")?.toString() ?: ""
+        }
 
         if (title.isEmpty() && text.isEmpty()) return
 
