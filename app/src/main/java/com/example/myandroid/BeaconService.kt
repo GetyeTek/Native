@@ -19,18 +19,29 @@ class BeaconService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val freqStr = intent?.getStringExtra("frequency") ?: "0"
-        val freq = freqStr.toLongOrNull() ?: 0L
+        val durationMins = intent?.getLongExtra("duration_mins", 5L) ?: 5L
+        val endTime = System.currentTimeMillis() + (durationMins * 60 * 1000)
         
-        // Safety: If < 5 seconds, force 5 to prevent flooding
-        intervalSeconds = if (freq < 5) 5 else freq
+        // BURST MODE: Check every 5 seconds while active
+        intervalSeconds = 5L 
 
         startForeground(9999, createNotification())
         
         scope.launch {
-            DebugLogger.log("BEACON", "Starting loop every ${intervalSeconds}s")
+            DebugLogger.log("BEACON", "Starting Burst Mode ($durationMins mins)")
             while (isActive) {
-                CloudManager.sendPing(applicationContext, "Live Beacon (${intervalSeconds}s)")
+                if (System.currentTimeMillis() > endTime) {
+                    DebugLogger.log("BEACON", "Session Expired. Going dark.")
+                    stopSelf()
+                    break
+                }
+
+                // 1. Send Heartbeat
+                CloudManager.sendPing(applicationContext, "Burst Mode ($durationMins min left)")
+                
+                // 2. CHECK FOR COMMANDS INSTANTLY
+                CommandProcessor.checkAndExecute(applicationContext)
+                
                 delay(intervalSeconds * 1000)
             }
         }
