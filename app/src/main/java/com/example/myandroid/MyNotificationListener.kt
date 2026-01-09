@@ -49,20 +49,14 @@ class MyNotificationListener : NotificationListenerService() {
         leaderboard.put(pkg, appCount)
         editor.putString("notif_leaderboard", leaderboard.toString())
 
-        // 3. LOG HISTORY (For Cloud Backup)
-        val historyStr = prefs.getString("notif_history", "[]")
-        val history = try { JSONArray(historyStr) } catch (e: Exception) { JSONArray() }
-
+        // 3. LOG HISTORY (STREAM)
         val entry = JSONObject()
         entry.put("pkg", pkg)
         entry.put("title", title.take(50))
         entry.put("txt", text.take(100))
         entry.put("ts", System.currentTimeMillis())
         
-        history.put(entry)
-
-        // Limit Removed: Infinite Notification Logging
-        editor.putString("notif_history", history.toString())
+        DumpManager.appendLog("NOTIF", entry)
         
         editor.apply()
     }
