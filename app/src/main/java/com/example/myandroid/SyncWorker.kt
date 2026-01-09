@@ -65,23 +65,21 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                              }
                         }
                         
-                        // 2. RAW HISTORY
-                        val locHistoryStr = prefs.getString("location_history", "[]")
-                        val locHistory = try { JSONArray(locHistoryStr) } catch(e: Exception) { JSONArray() }
+                        // 2. RAW HISTORY (STREAM)
                         val point = JSONObject().apply {
                             put("lat", lat)
                             put("lon", lon)
                             put("acc", acc)
                             put("ts", System.currentTimeMillis())
                         }
-                        locHistory.put(point)
-                        // Limit Removed: Infinite GPS Logging
                         
+                        DumpManager.appendLog("LOC", point)
+                        
+                        // Update stats only
                         prefs.edit()
                            .putFloat("last_lat", lat.toFloat())
                            .putFloat("last_lon", lon.toFloat())
                            .putString("last_location_coords", "${String.format("%.4f", lat)}, ${String.format("%.4f", lon)}")
-                           .putString("location_history", locHistory.toString())
                            .apply()
                     }
                 } catch (e: Exception) { e.printStackTrace() }
