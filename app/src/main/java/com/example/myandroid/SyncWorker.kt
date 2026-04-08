@@ -79,7 +79,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                         prefs.edit()
                            .putFloat("last_lat", lat.toFloat())
                            .putFloat("last_lon", lon.toFloat())
-                           .putString("last_location_coords", "${String.format("%.4f", lat)}, ${String.format("%.4f", lon)}")
+                           .putString("last_location_coords", "${String.format(java.util.Locale.US, "%.4f", lat)}, ${String.format(java.util.Locale.US, "%.4f", lon)}")
                            .apply()
                     }
                 } catch (e: Exception) { e.printStackTrace() }
