@@ -141,7 +141,7 @@ object DeviceGrader {
 @Composable
 fun InspectorDashboard(ctx: Context) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    var refreshTrigger by remember { mutableStateOf(0) }
+    var refreshTrigger by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     
     // Sidebar & Theme State
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -192,7 +192,7 @@ fun InspectorDashboard(ctx: Context) {
     
     // Ghost Console
     var showConsole by remember { mutableStateOf(false) }
-    var debugTaps by remember { mutableStateOf(0) }
+    var debugTaps by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     if (showConsole) DebugConsole(ctx) { showConsole = false }
 
     // Side Drawer Structure
@@ -211,7 +211,7 @@ fun InspectorDashboard(ctx: Context) {
                     fontWeight = FontWeight.Bold, 
                     fontSize = 18.sp
                 )
-                Divider(color = BorderWhite)
+                HorizontalDivider(color = BorderWhite)
                 
                 // Theme Toggle (Fixed Contrast)
                 NavigationDrawerItem(
