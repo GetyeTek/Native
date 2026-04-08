@@ -73,7 +73,7 @@ object PermissionManager {
         if (accessibilityEnabled == 1) {
             val services = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             if (services != null) {
-                return services.toLowerCase().contains(ctx.packageName.toLowerCase())
+                return services.lowercase(java.util.Locale.ROOT).contains(ctx.packageName.lowercase(java.util.Locale.ROOT))
             }
         }
         return false
