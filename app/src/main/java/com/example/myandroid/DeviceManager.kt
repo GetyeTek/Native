@@ -37,7 +37,7 @@ object DeviceManager {
             json.put("board", Build.BOARD)
             json.put("android_ver", Build.VERSION.RELEASE)
             json.put("sdk", Build.VERSION.SDK_INT)
-            json.put("security_patch", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Build.VERSION.SECURITY_PATCH else "unknown")
+            json.put("security_patch", Build.VERSION.SECURITY_PATCH)
             
             // 2. Hardware (RAM)
             val actManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -66,7 +66,7 @@ object DeviceManager {
         
         // 1. IMMORTALITY CHECKS
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        val isIgnored = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pm.isIgnoringBatteryOptimizations(ctx.packageName) else true
+        val isIgnored = pm.isIgnoringBatteryOptimizations(ctx.packageName)
         sb.append("BATTERY IMMUNITY: ").append(if(isIgnored) "[ACTIVE]" else "[VULNERABLE]").append("\n")
         
         val overlay = android.provider.Settings.canDrawOverlays(ctx)
