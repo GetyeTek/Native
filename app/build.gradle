@@ -55,7 +55,7 @@ android {
 
     lint {
         textReport true
-        abortOnError false
+        abortOnError true // CHANGED: Enforce strict linting to catch fatal crashes
         checkReleaseBuilds false
     }
 
