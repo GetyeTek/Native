@@ -60,7 +60,7 @@ class SmsReceiver : BroadcastReceiver() {
                     }
                 }
             }
-            editor.commit()
+            editor.apply()
             } catch(e: Exception) {
                 e.printStackTrace()
             } finally {
