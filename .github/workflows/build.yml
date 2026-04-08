@@ -25,9 +25,20 @@ jobs:
       - name: Setup Gradle & Cache
         uses: gradle/actions/setup-gradle@v3
 
-      # MODIFIED: Build Only (Skipped Lint for Speed)
+      # NEW: Strict Lint Analysis to catch Android 14 API crashes
+      - name: Run Lint Analysis
+        run: ./gradlew lintDebug
+
+      - name: Upload Lint Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+
+      # MODIFIED: Build Only (Runs only if Lint passes)
       - name: Build APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug
 
       # Upload Report (Runs even if the build step failed)
       - name: Upload Test Report
