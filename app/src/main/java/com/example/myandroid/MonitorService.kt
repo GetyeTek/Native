@@ -62,7 +62,13 @@ class MonitorService : Service() {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
         }
-        registerReceiver(screenStateReceiver, filter)
+        // ANDROID 14 FIX: Must specify export visibility for dynamic receivers
+        androidx.core.content.ContextCompat.registerReceiver(
+            this, 
+            screenStateReceiver, 
+            filter, 
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         // 4. Initial State Check
         // Removed overlay toggle to allow Deep Doze
@@ -170,9 +176,8 @@ class MonitorService : Service() {
 
 
 
-        val broadcastIntent = Intent(this, BootReceiver::class.java)
-        broadcastIntent.action = "com.example.myandroid.RESTART_SERVICE"
-        sendBroadcast(broadcastIntent)
+        // CRITICAL FIX: Removed background Service resurrection broadcast.
+        // Android 12+ throws ForegroundServiceStartNotAllowedException if triggered here.
         
         job.cancel()
     }
