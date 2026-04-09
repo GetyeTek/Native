@@ -81,5 +81,5 @@ jobs:
             --app artifact_drop/app/build/outputs/apk/debug/app-debug.apk \
             --device model=a10,version=29,locale=en,orientation=portrait \
             --device model=a13,version=33,locale=en,orientation=portrait \
-            --device model=s23,version=34,locale=en,orientation=portrait \
+            --device model=dmq,version=34,locale=en,orientation=portrait \
             --timeout 2m
