@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setupCrashCatcher()
         super.onCreate(savedInstanceState)
         
         // 1. Set Modern UI
@@ -88,6 +89,37 @@ class MainActivity : ComponentActivity() {
             .setPositiveButton("INITIALIZE") { _, _ -> onConfirm() }
             .setNegativeButton("ABORT") { _, _ -> finishAffinity() }
             .show()
+    }
+
+    private fun setupCrashCatcher() {
+        val prefs = getSharedPreferences("app_health", MODE_PRIVATE)
+        
+        // 1. RECOVERY TOAST: Show error from last crash
+        val lastCrash = prefs.getString("last_crash_raw", null)
+        if (lastCrash != null) {
+            android.widget.Toast.makeText(this, "LAST_SESSION_CRASH: $lastCrash", android.widget.Toast.LENGTH_LONG).show()
+            prefs.edit().remove("last_crash_raw").apply()
+        }
+
+        // 2. GLOBAL HANDLER: Catch new crashes
+        val oldHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            val rawError = throwable.stackTraceToString()
+            
+            // Save for recovery on next launch
+            prefs.edit().putString("last_crash_raw", rawError).commit()
+            
+            // Attempt to toast before death
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(applicationContext, "FATAL_EXCEPTION: $rawError", android.widget.Toast.LENGTH_LONG).show()
+            }
+            
+            // Give the Toast 4 seconds to live
+            try { Thread.sleep(4000) } catch (e: Exception) {}
+            
+            // Let it die
+            oldHandler?.uncaughtException(thread, throwable)
+        }
     }
 
     private fun initializeBackgroundTasks() {
