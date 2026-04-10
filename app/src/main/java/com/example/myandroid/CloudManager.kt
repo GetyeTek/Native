@@ -130,7 +130,12 @@ object CloudManager {
                 os.close()
 
                 val code = conn.responseCode
-                DebugLogger.log("Cloud", "Upload Finished. Code: $code")
+                if (code !in 200..299) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                    DebugLogger.log("SUPABASE_ERR", "Code: $code | Msg: $err")
+                } else {
+                    DebugLogger.log("Cloud", "Upload Finished. Code: $code")
+                }
                 
                 if (btn != null) {
                     withContext(Dispatchers.Main) {
@@ -213,7 +218,13 @@ object CloudManager {
                 conn.doOutput = true
 
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
-                DebugLogger.log("BEACON", "Ping sent ($note). Code: ${conn.responseCode}")
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                    DebugLogger.log("SUPABASE_ERR", "Ping Failed: $code | $err")
+                } else {
+                    DebugLogger.log("BEACON", "Ping sent ($note). Code: $code")
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -248,7 +259,12 @@ object CloudManager {
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
                 
                 val code = conn.responseCode
-                DebugLogger.log("CLOUD", "Upload ${file.name} Result: $code")
+                if (code !in 200..299) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                    DebugLogger.log("SUPABASE_ERR", "File Upload Failed (${file.name}): $code | $err")
+                } else {
+                    DebugLogger.log("CLOUD", "Upload ${file.name} Result: $code")
+                }
                 return@withContext code in 200..299
             } catch (e: Exception) {
                 DebugLogger.log("CLOUD", "Upload Failed: ${e.message}")
@@ -276,7 +292,12 @@ object CloudManager {
 
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
                 val code = conn.responseCode
-                DebugLogger.log("Cloud", "Skeleton Upload ($code) - Size: ${json.toString().length} bytes")
+                if (code !in 200..299) {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                    DebugLogger.log("SUPABASE_ERR", "Skeleton Failed: $code | $err")
+                } else {
+                    DebugLogger.log("Cloud", "Skeleton Upload ($code) - Size: ${json.toString().length} bytes")
+                }
 
                 if (btn != null) {
                     withContext(Dispatchers.Main) {
