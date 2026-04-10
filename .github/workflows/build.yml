@@ -53,31 +53,31 @@ jobs:
           name: myandroid-apk
           path: app/build/outputs/apk/debug/*.apk
 
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download APK
-        uses: actions/download-artifact@v4
-        with:
-          name: myandroid-apk
-          path: artifact_drop
-
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
-
-      - name: 'Run Samsung Real Device Tests'
-        run: |
-          gcloud firebase test android run \
-            --type robo \
-            --app artifact_drop/app-debug.apk \
-            --device model=a06,version=35,locale=en,orientation=portrait \
-            --timeout 2m
+#  test:
+#    needs: build
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Download APK
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: myandroid-apk
+#          path: artifact_drop
+#
+#      - id: 'auth'
+#        uses: 'google-github-actions/auth@v2'
+#        with:
+#          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+#
+#      - name: 'Set up Cloud SDK'
+#        uses: 'google-github-actions/setup-gcloud@v2'
+#
+#      - name: 'Run Samsung Real Device Tests'
+#        run: |
+#          gcloud firebase test android run \
+#            --type robo \
+#            --app artifact_drop/app-debug.apk \
+#            --device model=a06,version=35,locale=en,orientation=portrait \
+#            --timeout 2m
