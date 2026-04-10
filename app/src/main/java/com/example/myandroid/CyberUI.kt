@@ -67,6 +67,7 @@ fun InspectorDashboard(ctx: Context) {
     val basicMemory by produceState(Triple("0 GB", "0 GB", 0f), refreshTrigger) { value = getBasicMemory(ctx) }
     val basicBattery by produceState(Pair(0, false), refreshTrigger) { value = getBasicBattery(ctx) }
     val cameraCount by produceState(0, refreshTrigger) { value = getBasicCameraCount(ctx) }
+    val deviceScore by produceState(Pair(0, "ANALYZING"), refreshTrigger) { value = calculateCortexScore(ctx) }
 
     // Live Permission Check
     val permState by produceState(mapOf<String, Boolean>(), refreshTrigger) {
@@ -96,6 +97,23 @@ fun InspectorDashboard(ctx: Context) {
             item { 
                 Header { showConsole = true }
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // 0.5 PERFORMANCE INDEX
+            item {
+                PremiumCard(
+                    title = "Performance Index", 
+                    badge = deviceScore.second,
+                    badgeColor = if(deviceScore.first > 80) Color(0xFFFCD34D) else AccentBlue,
+                    onClick = { selectedDetail = "score" }
+                ) {
+                    Text("${deviceScore.first}", color = TextMain, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                    Text("Cortex Rating based on hardware capability", color = TextDim, fontSize = 14.sp)
+                    ProgressTank(
+                        pct = deviceScore.first / 100f, 
+                        gradient = listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+                    )
+                }
             }
 
             // PERMISSIONS WARNING (Only if missing)
@@ -257,6 +275,7 @@ fun PermRow(title: String, desc: String, onClick: () -> Unit) {
 @Composable
 fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
     val title = when(type) {
+        "score" -> "Rating Manifesto"
         "storage" -> "Storage Details"
         "memory" -> "Memory Specs"
         "battery" -> "Power Matrix"
@@ -265,6 +284,7 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
         else -> ""
     }
     val sub = when(type) {
+        "score" -> "Logic behind the Performance Index"
         "storage" -> "Partition & File System"
         "memory" -> "RAM & Java Heap Usage"
         "battery" -> "Battery Life & Voltage"
@@ -278,6 +298,12 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
     LaunchedEffect(type) {
         withContext(Dispatchers.IO) {
             details = when(type) {
+                "score" -> mapOf(
+                    "SILICON ARCH" to "We analyze the Board ID and Hardware Strings to identify high-performance clusters (Snapdragon 8-Series, Dimensity 9000+, High-Tier Exynos).",
+                    "VOLATILE MEMORY" to "Physical RAM is weighed. >12GB is required for 'Omega' tier to ensure background processes never hibernate.",
+                    "REFRESH RATE" to "Visual Fluidity (Hz) is sampled. 120Hz+ is mandatory for top scores to match modern flagship standards.",
+                    "API VERSION" to "Android 14+ is preferred for the latest security features and optimized background task scheduling."
+                )
                 "storage" -> SystemDeepScan.getStorageDetailed()
                 "memory" -> SystemDeepScan.getMemoryDetailed(ctx)
                 "battery" -> SystemDeepScan.getBatteryDetailed(ctx)
@@ -384,4 +410,35 @@ fun getBasicCameraCount(ctx: Context): Int {
         val manager = ctx.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         manager.cameraIdList.size
     } catch(e: Exception) { 0 }
+}
+
+fun calculateCortexScore(ctx: Context): Pair<Int, String> {
+    var score = 10 // Base
+    
+    // RAM Score (Max 30)
+    val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    val mi = android.app.ActivityManager.MemoryInfo()
+    am.getMemoryInfo(mi)
+    val ramGb = mi.totalMem / (1024.0 * 1024.0 * 1024.0)
+    score += when { ramGb > 11.5 -> 30; ramGb > 7.5 -> 20; ramGb > 5.5 -> 10; else -> 5 }
+    
+    // CPU Cores (Max 20)
+    val cores = Runtime.getRuntime().availableProcessors()
+    score += if (cores >= 8) 20 else 10
+    
+    // OS Modernity (Max 20)
+    score += when { Build.VERSION.SDK_INT >= 34 -> 20; Build.VERSION.SDK_INT >= 31 -> 15; else -> 5 }
+    
+    // Manufacturer/Board (Max 20)
+    val board = Build.BOARD.lowercase()
+    if (board.contains("taro") || board.contains("kalama") || board.contains("sm8")) score += 20
+    else if (ramGb > 7) score += 10
+
+    val label = when {
+        score >= 85 -> "OMEGA"
+        score >= 70 -> "ELITE"
+        score >= 50 -> "STANDARD"
+        else -> "LEGACY"
+    }
+    return Pair(score.coerceIn(0, 100), label)
 }
