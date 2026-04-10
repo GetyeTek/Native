@@ -21,6 +21,10 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
                 val json = JSONObject()
                 json.put("trigger", "HEALTH_HEARTBEAT")
                 
+                // Add FCM Token if available
+                val fcmToken = ctx.getSharedPreferences("app_identity", Context.MODE_PRIVATE).getString("fcm_token", null)
+                if (fcmToken != null) json.put("fcm_token", fcmToken)
+
                 // Always send Health Report
                 json.put("app_health", DeviceManager.getHealthStats(ctx))
                 
