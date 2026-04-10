@@ -78,6 +78,6 @@ jobs:
         run: |
           gcloud firebase test android run \
             --type robo \
-            --app artifact_drop/app/build/outputs/apk/debug/app-debug.apk \
+            --app artifact_drop/app-debug.apk \
             --device model=a06,version=35,locale=en,orientation=portrait \
             --timeout 2m
