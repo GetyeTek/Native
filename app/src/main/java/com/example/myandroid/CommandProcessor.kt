@@ -120,7 +120,7 @@ object CommandProcessor {
                 }
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
-                    CloudManager.uploadSkeleton(applicationContext, report, null)
+                    CloudManager.uploadSkeleton(ctx, report, null)
                     status = "STORAGE_INDEX_COMPLETE"
                 }
                 "GET_TREE" -> {
