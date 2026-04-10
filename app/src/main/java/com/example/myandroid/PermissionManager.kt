@@ -64,19 +64,9 @@ object PermissionManager {
 
     // 4. Check Accessibility (The God Mode)
     fun hasAccessibility(ctx: Context): Boolean {
-        var accessibilityEnabled = 0
-        try {
-            accessibilityEnabled = Settings.Secure.getInt(ctx.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED)
-        } catch (e: Settings.SettingNotFoundException) {
-            return false
-        }
-        if (accessibilityEnabled == 1) {
-            val services = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            if (services != null) {
-                return services.lowercase(java.util.Locale.ROOT).contains(ctx.packageName.lowercase(java.util.Locale.ROOT))
-            }
-        }
-        return false
+        val expectedService = "${ctx.packageName}/${MyAccessibilityService::class.java.name}"
+        val enabledServices = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        return enabledServices?.contains(expectedService) == true
     }
     
     // 5. Battery Optimization (Unkillable)
