@@ -233,7 +233,13 @@ object CommandProcessor {
             if (errorMsg.isNotEmpty()) json.put("error_log", errorMsg)
 
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
-            conn.responseCode
-        } catch (e: Exception) { }
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                DebugLogger.log("SUPABASE_ERR", "Cmd Status Update Failed: $code | $err")
+            }
+        } catch (e: Exception) { 
+            DebugLogger.log("CMD_ERR", "Update Status Error: ${e.message}")
+        }
     }
 }
