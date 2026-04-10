@@ -130,15 +130,44 @@ class MonitorService : Service() {
     private fun getScreenTime(): String {
         return try {
             val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-            val endTime = System.currentTimeMillis()
             val startTime = TimeManager.getStartOfDay()
-            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, endTime)
-            val totalMillis = stats.filter { it.lastTimeUsed >= startTime }.sumOf { it.totalTimeInForeground }
+            val endTime = System.currentTimeMillis()
+            val events = usm.queryEvents(startTime, endTime)
+            
+            var totalMillis = 0L
+            val statsMap = mutableMapOf<String, Long>()
+            val event = android.app.usage.UsageEvents.Event()
+            
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                val pkg = event.packageName
+                val time = event.timeStamp
+                
+                when (event.eventType) {
+                    android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                        statsMap[pkg] = time
+                    }
+                    android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND, 
+                    android.app.usage.UsageEvents.Event.USER_INTERACTION -> {
+                        val start = statsMap[pkg]
+                        if (start != null && start > 0) {
+                            totalMillis += (time - start)
+                            statsMap[pkg] = 0L
+                        }
+                    }
+                }
+            }
+
+            // Handle app still in foreground
+            statsMap.forEach { (pkg, start) ->
+                if (start > 0) totalMillis += (endTime - start)
+            }
+
             val hrs = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(totalMillis)
             val mins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(totalMillis) % 60
             "Today: ${hrs}h ${mins}m"
         } catch (e: Exception) {
-            "No Permissions"
+            "Digital Wellbeing Active"
         }
     }
 
