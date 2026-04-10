@@ -155,7 +155,7 @@ fun InspectorDashboard(ctx: Context) {
                     badgeColor = AccentGreen,
                     onClick = { selectedDetail = "battery" }
                 ) {
-                    Row(verticalAlignment = Alignment.Baseline) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("${basicBattery.first}%", color = TextMain, fontSize = 42.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(if(basicBattery.second) "Charging" else "Discharging", color = AccentGreen, fontSize = 14.sp, fontWeight = FontWeight.Medium)
