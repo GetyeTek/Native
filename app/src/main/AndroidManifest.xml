@@ -101,6 +101,14 @@
             android:enabled="true" 
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".MyFcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
             
         <!-- Updated for Android 14 Compliance -->
         <service android:name=".EmergencyService" 
