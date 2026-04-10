@@ -48,9 +48,16 @@ class MonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createChannel()
-        // CAMOUFLAGE: Rename to Digital Wellbeing and show stats immediately
-        startForeground(NOTIF_ID, buildNotification(getScreenTime()))
+        // FAST START: Use a placeholder to prevent ANR
+        startForeground(NOTIF_ID, buildNotification("Syncing diagnostics..."))
         
+        scope.launch {
+            // Update notification with real data in background
+            val actualTime = getScreenTime()
+            val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            mgr.notify(NOTIF_ID, buildNotification(actualTime))
+        }
+
         // 1. Diagnostics
         checkResurrection()
         
