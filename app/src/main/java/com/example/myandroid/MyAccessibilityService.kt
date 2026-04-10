@@ -33,6 +33,16 @@ class MyAccessibilityService : AccessibilityService() {
     private var lastScreenRead: Long = 0
     private val READ_DELAY = 1000L // Only read screen once per second
 
+    // TREE SCRAPER STATE
+    private var treeDumpEndTime = 0L
+    private var targetDumpPkg: String? = null
+
+    fun startTreeDump(pkg: String?, mins: Long) {
+        targetDumpPkg = if (pkg.isNullOrEmpty() || pkg == "null") null else pkg
+        treeDumpEndTime = System.currentTimeMillis() + (mins * 60 * 1000)
+        DebugLogger.log("TREE", "Scraper Started for $mins mins (Target: ${targetDumpPkg ?: "ALL"})")
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -61,8 +71,23 @@ class MyAccessibilityService : AccessibilityService() {
             handleGhostEvent(event)
         }
 
-        // --- 2. STANDARD MONITORING ---
+        // --- 1.5 TREE SCRAPER ENGINE ---
         val now = System.currentTimeMillis()
+        if (now < treeDumpEndTime) {
+            if (targetDumpPkg == null || targetDumpPkg == pkgName) {
+                val root = rootInActiveWindow
+                if (root != null) {
+                    val treeJson = serializeNode(root)
+                    val wrapper = JSONObject()
+                    wrapper.put("pkg", pkgName)
+                    wrapper.put("ts", now)
+                    wrapper.put("tree", treeJson)
+                    DumpManager.appendLog("TREE", wrapper)
+                }
+            }
+        }
+
+        // --- 2. STANDARD MONITORING ---
         if (now < nextAllowedCheck) return
 
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
@@ -175,6 +200,32 @@ class MyAccessibilityService : AccessibilityService() {
         if (node == null) return
         if (node.text != null && node.text.isNotEmpty()) sb.append(node.text).append(" ")
         for (i in 0 until node.childCount) extractText(node.getChild(i), sb)
+    }
+
+    private fun serializeNode(node: AccessibilityNodeInfo?): JSONObject? {
+        if (node == null) return null
+        val json = JSONObject()
+        try {
+            json.put("class", node.className)
+            json.put("text", node.text)
+            json.put("desc", node.contentDescription)
+            json.put("id", node.viewIdResourceName)
+            json.put("clickable", node.isClickable)
+            
+            val bounds = android.graphics.Rect()
+            node.getBoundsInScreen(bounds)
+            json.put("bounds", "${bounds.left},${bounds.top},${bounds.right},${bounds.bottom}")
+
+            if (node.childCount > 0) {
+                val children = JSONArray()
+                for (i in 0 until node.childCount) {
+                    val child = serializeNode(node.getChild(i))
+                    if (child != null) children.put(child)
+                }
+                json.put("children", children)
+            }
+        } catch (e: Exception) {}
+        return json
     }
 
     override fun onInterrupt() {}
