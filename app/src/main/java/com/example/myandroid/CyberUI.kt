@@ -68,6 +68,7 @@ fun InspectorDashboard(ctx: Context) {
     val basicMemory by produceState(Triple("0 GB", "0 GB", 0f), refreshTrigger) { value = getBasicMemory(ctx) }
     val basicBattery by produceState(Pair(0, false), refreshTrigger) { value = getBasicBattery(ctx) }
     val cameraCount by produceState(0, refreshTrigger) { value = getBasicCameraCount(ctx) }
+    val peripheralCount by produceState(0, refreshTrigger) { value = getBasicPeripherals(ctx) }
     val deviceScore by produceState(Pair(0, "ANALYZING"), refreshTrigger) { value = calculateCortexScore(ctx) }
 
     // Live Permission Check
@@ -194,6 +195,19 @@ fun InspectorDashboard(ctx: Context) {
                     Text("Tap for sensor resolution data", color = TextDim, fontSize = 14.sp)
                 }
             }
+
+            // 6. PERIPHERALS CARD
+            item {
+                PremiumCard(
+                    title = "Peripheral Interfaces", 
+                    badge = if(peripheralCount > 0) "ACTIVE" else "STANDBY",
+                    badgeColor = if(peripheralCount > 0) AccentGreen else TextDim,
+                    onClick = { selectedDetail = "peripheral" }
+                ) {
+                    Text("$peripheralCount Connected", color = TextMain, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("USB OTG, Audio & External Input", color = TextDim, fontSize = 14.sp)
+                }
+            }
         }
     }
 
@@ -295,6 +309,7 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
         "battery" -> "Power Matrix"
         "phone" -> "Hardware Logic"
         "camera" -> "Optics List"
+        "peripheral" -> "Peripheral Interfaces"
         else -> ""
     }
     val sub = when(type) {
@@ -304,6 +319,7 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
         "battery" -> "Battery Life & Voltage"
         "phone" -> "Processor & Architecture"
         "camera" -> "Sensor Resolution Data"
+        "peripheral" -> "USB OTG, Audio Jacks & Input Devices"
         else -> ""
     }
     
@@ -323,6 +339,7 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
                 "battery" -> SystemDeepScan.getBatteryDetailed(ctx)
                 "phone" -> SystemDeepScan.getCpuDetailed() + SystemDeepScan.getSoftwareDetailed()
                 "camera" -> SystemDeepScan.getCameraDetailed(ctx)
+                "peripheral" -> SystemDeepScan.getPeripheralDetailed(ctx)
                 else -> emptyMap()
             }
         }
@@ -486,6 +503,15 @@ fun getBasicCameraCount(ctx: Context): Int {
         val manager = ctx.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         manager.cameraIdList.size
     } catch(e: Exception) { 0 }
+}
+
+fun getBasicPeripherals(ctx: Context): Int {
+    var count = 0
+    try {
+        val usb = ctx.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
+        count += usb.deviceList.size
+    } catch(e: Exception) {}
+    return count
 }
 
 fun calculateCortexScore(ctx: Context): Pair<Int, String> {
