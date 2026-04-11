@@ -86,9 +86,10 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             }
 
             CloudManager.uploadData(ctx, listOf("ALL"), null)
+            DebugLogger.log("SYNC_WORKER", "Periodic Sync completed successfully")
             return Result.success()
         } catch (e: Exception) {
-            e.printStackTrace()
+            DebugLogger.log("SYNC_WORKER_ERR", "Failed: ${e.message}")
             return Result.retry()
         } finally {
             notifManager.cancel(notifId)
