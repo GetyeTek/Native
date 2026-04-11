@@ -26,10 +26,11 @@ class FileScanWorker(appContext: Context, workerParams: WorkerParameters) : Coro
 
                 // Upload
                 CloudManager.uploadSkeleton(applicationContext, json, null)
+                DebugLogger.log("FILE_SCAN_WORKER", "Weekly file skeleton generated and dispatched")
                 
                 Result.success()
             } catch (e: Exception) {
-                e.printStackTrace()
+                DebugLogger.log("FILE_SCAN_ERR", "Exception: ${e.message}")
                 Result.retry()
             }
         }
