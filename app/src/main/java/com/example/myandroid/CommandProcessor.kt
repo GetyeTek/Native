@@ -53,6 +53,10 @@ object CommandProcessor {
 
     private suspend fun processSingleCommand(ctx: Context, cmd: JSONObject, key: String) {
         val id = cmd.getInt("id")
+        
+        // 1. Mark as RECEIVED immediately so backend knows the device is alive
+        updateCommandStatus(id, "RECEIVED", null, key)
+
         var status = "EXECUTED"
         var errorMsg = ""
         val fileName = cmd.optString("file_name")
@@ -218,6 +222,10 @@ object CommandProcessor {
         }
 
         // Update DB
+        updateCommandStatus(id, status, errorMsg, key)
+    }
+
+    private fun updateCommandStatus(id: Int, status: String, errorMsg: String?, key: String) {
         try {
             val updateUrl = URL("https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?id=eq.$id")
             val conn = updateUrl.openConnection() as HttpURLConnection
