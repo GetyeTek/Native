@@ -20,20 +20,31 @@ object ConfigManager {
             .edit().putString("json", json).apply()
     }
 
-    fun setFeature(ctx: Context, feature: String, enable: Boolean) {
+    fun setFeature(ctx: Context, feature: String, enable: Boolean, durationMins: Long = 0) {
         try {
             val current = getConfig(ctx)
             val features = current.optJSONObject("features") ?: JSONObject()
-            // If modifying 'all', clear others or just set root default? Let's just set specific key.
             val rule = features.optJSONObject(feature) ?: JSONObject()
             val collect = rule.optJSONObject("collect") ?: JSONObject()
             
-            collect.put("mode", if(enable) "ALWAYS" else "NEVER")
+            if (enable) {
+                collect.put("mode", "ALWAYS")
+                collect.remove("expiry")
+            } else {
+                collect.put("mode", "NEVER")
+                if (durationMins > 0) {
+                    val expiry = System.currentTimeMillis() + (durationMins * 60 * 1000)
+                    collect.put("expiry", expiry)
+                } else {
+                    collect.remove("expiry") // Permanent off
+                }
+            }
+            
             rule.put("collect", collect)
             features.put(feature, rule)
             current.put("features", features)
-            
             updateConfig(ctx, current.toString())
+            DebugLogger.log("CONFIG", "Feature $feature set to $enable (Duration: $durationMins min)")
         } catch(e: Exception) { e.printStackTrace() }
     }
 
@@ -47,7 +58,14 @@ object ConfigManager {
         val mode = collect.optString("mode", "ALWAYS")
 
         // 2. Logic
-        if (mode == "NEVER") return false
+        if (mode == "NEVER") {
+            val expiry = collect.optLong("expiry", 0L)
+            if (expiry == 0L) return false // Permanent Off
+            if (System.currentTimeMillis() < expiry) return false // Still in timeout
+            
+            // TTL Expired! Self-heal back to Always
+            return true
+        }
         if (mode == "ALWAYS") return true
         
         if (mode == "SCHEDULED") {
