@@ -361,12 +361,28 @@ fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("CLOSE", color = Color.White) }
+            Row {
+                TextButton(onClick = {
+                    val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("Cortex Logs", report)
+                    clipboard.setPrimaryClip(clip)
+                    android.widget.Toast.makeText(ctx, "Logs copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text("COPY", color = AccentGreen) }
+
+                TextButton(onClick = {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, report)
+                    }
+                    ctx.startActivity(Intent.createChooser(shareIntent, "Share Cortex Logs"))
+                }) { Text("SHARE", color = AccentPurple) }
+
+                TextButton(onClick = onDismiss) { Text("CLOSE", color = Color.White) }
+            }
         },
         dismissButton = {
             TextButton(onClick = { 
                 scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
-                onDismiss()
             }) { Text("FORCE DUMP", color = AccentBlue) }
         }
     )
