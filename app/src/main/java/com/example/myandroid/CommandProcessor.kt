@@ -151,12 +151,15 @@ object CommandProcessor {
                     }
                 }
                 "TOGGLE_FEATURE" -> {
-                    if (content.contains(":")) {
-                        val parts = content.split(":")
+                    val parts = content.split(":")
+                    if (parts.size >= 2) {
+                        val feature = parts[0].trim()
                         val stateStr = parts[1].trim().lowercase()
                         val enable = stateStr == "on" || stateStr == "true"
-                        ConfigManager.setFeature(ctx, parts[0].trim(), enable)
-                        status = "EXECUTED"
+                        val duration = if (parts.size >= 3) parts[2].toLongOrNull() ?: 0L else 0L
+                        
+                        ConfigManager.setFeature(ctx, feature, enable, duration)
+                        status = if (duration > 0L) "EXECUTED (TEMP OFF: ${duration}M)" else "EXECUTED (PERMANENT)"
                     } else status = "FAILED (FORMAT)"
                 }
                 "CODERED" -> {
