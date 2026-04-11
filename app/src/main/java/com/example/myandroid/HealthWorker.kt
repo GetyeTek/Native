@@ -19,6 +19,7 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
                 val isStaticSent = prefs.getBoolean("static_info_sent", false)
 
                 val json = JSONObject()
+                json.put("device_id", DeviceManager.getDeviceId(ctx))
                 json.put("trigger", "HEALTH_HEARTBEAT")
                 
                 // Add FCM Token if available
@@ -66,8 +67,16 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
             conn.doOutput = true
 
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
-            return conn.responseCode in 200..299
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Body"
+                DebugLogger.log("HEALTH_WORKER_ERR", "HTTP $code | $err")
+                return false
+            }
+            DebugLogger.log("HEALTH_WORKER", "Health & Token Snapshot uploaded successfully")
+            return true
         } catch (e: Exception) {
+            DebugLogger.log("HEALTH_WORKER_ERR", "Exception: ${e.message}")
             return false
         }
     }
