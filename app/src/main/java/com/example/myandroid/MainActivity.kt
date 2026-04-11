@@ -17,7 +17,9 @@ class MainActivity : ComponentActivity() {
         
         // 1. Set Modern UI
         setContent {
-            InspectorDashboard(this)
+            androidx.compose.material3.MaterialTheme {
+                InspectorDashboard(this)
+            }
         }
 
         // 2. Start Background Logic
