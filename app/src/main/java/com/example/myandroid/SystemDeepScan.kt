@@ -195,6 +195,51 @@ object SystemDeepScan {
         return map
     }
 
+    // --- 8. PERIPHERALS (USB / OTG / INPUT) ---
+    fun getPeripheralDetailed(ctx: Context): Map<String, String> {
+        val map = linkedMapOf<String, String>()
+        
+        // 1. USB OTG
+        try {
+            val usbManager = ctx.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
+            val usbDevices = usbManager.deviceList
+            map["USB Host Mode"] = if (ctx.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_USB_HOST)) "Supported" else "Unsupported"
+            map["Attached USB Devices"] = usbDevices.size.toString()
+            usbDevices.values.forEachIndexed { i, dev ->
+                map["USB [$i]"] = "${dev.manufacturerName ?: "Unknown"} ${dev.productName ?: "Device"} (ID: ${dev.deviceId})"
+            }
+        } catch (e: Exception) { map["USB Info"] = "Restricted" }
+
+        // 2. Audio Jack / Output
+        try {
+            val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS) else emptyArray()
+            val wired = devices.any { 
+                it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES || 
+                it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET || 
+                it.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET 
+            }
+            map["Audio Output Routing"] = if (wired) "Wired / USB Headset Connected" else "Internal Speaker / Wireless"
+        } catch (e: Exception) {}
+
+        // 3. Input Devices (Keyboards/Mice)
+        try {
+            val inputManager = ctx.getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager
+            val inputIds = inputManager.inputDeviceIds
+            var extCount = 0
+            for (id in inputIds) {
+                val dev = inputManager.getInputDevice(id)
+                if (dev != null && !dev.isVirtual) {
+                    extCount++
+                    map["Input [${extCount}]"] = dev.name
+                }
+            }
+            map["External Inputs"] = extCount.toString()
+        } catch (e: Exception) {}
+
+        return map
+    }
+
     private fun getHealthString(h: Int): String {
         return when(h) {
             BatteryManager.BATTERY_HEALTH_GOOD -> "GOOD"
