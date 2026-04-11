@@ -13,6 +13,19 @@ class MyFcmService : FirebaseMessagingService() {
         getSharedPreferences("app_identity", MODE_PRIVATE)
             .edit().putString("fcm_token", token).apply()
         DebugLogger.log("FCM", "New token generated")
+        
+        // Trigger immediate robust upload
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+        val immediateHealthCheck = androidx.work.OneTimeWorkRequestBuilder<HealthWorker>()
+            .setConstraints(constraints)
+            .build()
+        androidx.work.WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "FCM_TOKEN_UPDATE", 
+            androidx.work.ExistingWorkPolicy.REPLACE, 
+            immediateHealthCheck
+        )
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
