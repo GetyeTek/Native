@@ -200,8 +200,8 @@ object CommandProcessor {
 
                         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                         
-                        val target = json.optString("target", "activity")
-                        when(target.lowercase()) {
+                                                    val target = json.optString("target", "activity")
+                            when(target?.lowercase() ?: "activity") {
                             "service" -> {
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) ctx.startForegroundService(intent)
                                 else ctx.startService(intent)
