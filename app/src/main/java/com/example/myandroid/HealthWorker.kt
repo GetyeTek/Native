@@ -18,9 +18,10 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
                 val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
                 val isStaticSent = prefs.getBoolean("static_info_sent", false)
 
-                val json = JSONObject()
-                json.put("device_id", DeviceManager.getDeviceId(ctx))
-                json.put("trigger", "HEALTH_HEARTBEAT")
+                            val json = JSONObject()
+            json.put("device_id", DeviceManager.getDeviceId(ctx))
+            json.put("device_model", android.os.Build.MODEL)
+            json.put("trigger", "HEALTH_HEARTBEAT")
                 
                 // Add FCM Token if available
                 val fcmToken = ctx.getSharedPreferences("app_identity", Context.MODE_PRIVATE).getString("fcm_token", null)
