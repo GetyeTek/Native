@@ -227,11 +227,13 @@ fun PremiumCard(title: String, badge: String? = null, badgeColor: Color = Color.
     ) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(title.uppercase(), color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-            if (badge != null) {
-                Box(modifier = Modifier.background(Color(0x1AFFFFFF), RoundedCornerShape(100)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                    Text(badge, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (badge != null) {
+                    Box(modifier = Modifier.background(Color(0x1AFFFFFF), RoundedCornerShape(100)).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                        Text(badge, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-            } else {
                 Text("›", color = TextDim, fontSize = 24.sp, modifier = Modifier.offset(y = (-2).dp))
             }
         }
