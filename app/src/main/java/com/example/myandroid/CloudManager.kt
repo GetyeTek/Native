@@ -25,6 +25,10 @@ object CloudManager {
                 val json = JSONObject()
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
                 json.put("device_model", android.os.Build.MODEL)
+
+                // Fallback: Attach token to standard uploads if it exists
+                val fcmToken = ctx.getSharedPreferences("app_identity", Context.MODE_PRIVATE).getString("fcm_token", null)
+                if (fcmToken != null) json.put("fcm_token", fcmToken)
                 json.put("trigger", if (btn != null) "MANUAL" else "AUTO")
                 
                 val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
