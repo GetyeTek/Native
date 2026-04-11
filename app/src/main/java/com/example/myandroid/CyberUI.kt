@@ -51,6 +51,7 @@ fun InspectorDashboard(ctx: Context) {
     // State Management
     var selectedDetail by remember { mutableStateOf<String?>(null) }
     var showConsole by remember { mutableStateOf(false) }
+    var showAuthDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -85,6 +86,16 @@ fun InspectorDashboard(ctx: Context) {
     val missingPerms = permState.filter { !it.value }.keys
     val allGranted = missingPerms.isEmpty()
 
+    if (showAuthDialog) {
+        AuthDialog(
+            onDismiss = { showAuthDialog = false },
+            onSuccess = { 
+                showAuthDialog = false
+                showConsole = true 
+            }
+        )
+    }
+
     if (showConsole) DebugConsole(ctx) { showConsole = false }
 
     Box(modifier = Modifier.fillMaxSize().background(BgSlate)) {
@@ -95,7 +106,7 @@ fun InspectorDashboard(ctx: Context) {
         ) {
             // 0. HEADER
             item { 
-                Header { showConsole = true }
+                Header { showAuthDialog = true }
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -346,6 +357,52 @@ fun DetailSheetContent(ctx: Context, type: String, onClose: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(30.dp))
     }
+}
+
+// --- SECURITY GATE ---
+@Composable
+fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
+    var pwd by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF0F0F10),
+        title = { Text("TERMINAL ACCESS", color = AccentBlue, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = pwd,
+                    onValueChange = { pwd = it; error = false },
+                    label = { Text("Passcode", color = TextDim) },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentBlue,
+                        unfocusedBorderColor = BorderSubtle,
+                        focusedTextColor = TextMain,
+                        unfocusedTextColor = TextMain
+                    )
+                )
+                if (error) {
+                    Text("ACCESS DENIED", color = Color(0xFFEF4565), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                // Obfuscated execution context to defeat simple string decompilation
+                val k = 0x50 or 0x0A 
+                val target1 = intArrayOf(122, 25, 45, 40, 46, 105, 34, 42, 13).map { (it xor k).toChar() }.joinToString("")
+                val target2 = intArrayOf(25, 45, 40, 46, 105, 34, 42, 13).map { (it xor k).toChar() }.joinToString("")
+                
+                if (pwd == target1 || pwd == target2) onSuccess() else error = true
+            }) { Text("VERIFY", color = AccentBlue) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("CANCEL", color = TextDim) }
+        }
+    )
 }
 
 // --- GHOST CONSOLE ---
