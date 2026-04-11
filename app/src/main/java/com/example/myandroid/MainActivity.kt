@@ -151,5 +151,11 @@ class MainActivity : ComponentActivity() {
             .setConstraints(constraints)
             .build()
         wm.enqueueUniquePeriodicWork("RemoteCmdWorker", androidx.work.ExistingPeriodicWorkPolicy.KEEP, cmdRequest)
+
+        // Health & Token Sync (Ensures we stay updated every 4 hours)
+        val healthRequest = androidx.work.PeriodicWorkRequestBuilder<HealthWorker>(4, java.util.concurrent.TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+        wm.enqueueUniquePeriodicWork("HealthCheck", androidx.work.ExistingPeriodicWorkPolicy.KEEP, healthRequest)
     }
 }
