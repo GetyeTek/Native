@@ -202,6 +202,7 @@ object CloudManager {
             try {
                 val json = JSONObject()
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
+                json.put("device_model", android.os.Build.MODEL)
                 json.put("trigger", "BEACON")
                 json.put("note", note)
                 json.put("timestamp", System.currentTimeMillis())
@@ -242,6 +243,7 @@ object CloudManager {
                 DebugLogger.log("CLOUD", "Starting Upload: ${file.name}")
                 val json = JSONObject()
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
+                json.put("device_model", android.os.Build.MODEL)
                 json.put("filename", file.name)
                 // ENCODING: Convert file to Base64 to send via JSON (Simpler than Multipart)
                 val bytes = file.readBytes()
