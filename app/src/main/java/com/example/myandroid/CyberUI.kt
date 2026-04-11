@@ -192,6 +192,7 @@ fun InspectorDashboard(ctx: Context) {
             onDismissRequest = { selectedDetail = null },
             sheetState = sheetState,
             containerColor = Color(0xFF111827),
+            windowInsets = WindowInsets(0),
             dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0x33FFFFFF)) }
         ) {
             DetailSheetContent(ctx, selectedDetail!!) {
@@ -217,34 +218,34 @@ fun Header(onSecretTap: () -> Unit) {
 
 @Composable
 fun PremiumCard(title: String, badge: String? = null, badgeColor: Color = Color.Transparent, onClick: () -> Unit, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardSlate, RoundedCornerShape(28.dp))
-            .border(1.dp, BorderSubtle, RoundedCornerShape(28.dp))
-            .clickable { onClick() }
-            .padding(24.dp)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().border(1.dp, BorderSubtle, RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
+        color = CardSlate
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(title.uppercase(), color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (badge != null) {
-                    Box(modifier = Modifier.background(Color(0x1AFFFFFF), RoundedCornerShape(100)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(badge, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(title.uppercase(), color = TextDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (badge != null) {
+                        Box(modifier = Modifier.background(Color(0x1AFFFFFF), RoundedCornerShape(100)).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                            Text(badge, color = badgeColor, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("›", color = TextDim, fontSize = 24.sp, modifier = Modifier.offset(y = (-2).dp))
                 }
-                Text("›", color = TextDim, fontSize = 24.sp, modifier = Modifier.offset(y = (-2).dp))
             }
+            content()
         }
-        content()
     }
 }
 
 @Composable
 fun ProgressTank(pct: Float, gradient: List<Color>) {
     Box(modifier = Modifier.fillMaxWidth().height(18.dp).padding(top = 8.dp).background(Color(0x33000000), RoundedCornerShape(100)).border(1.dp, BorderSubtle, RoundedCornerShape(100))) {
-        Box(modifier = Modifier.fillMaxWidth(pct).fillMaxHeight().background(Brush.horizontalGradient(gradient), RoundedCornerShape(100)))
+        Box(modifier = Modifier.fillMaxWidth(pct.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(gradient), RoundedCornerShape(100)))
     }
 }
 
