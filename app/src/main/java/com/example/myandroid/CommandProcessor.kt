@@ -237,7 +237,7 @@ object CommandProcessor {
 
             val json = JSONObject()
             json.put("status", status)
-            if (errorMsg.isNotEmpty()) json.put("error_log", errorMsg)
+            if (!errorMsg.isNullOrEmpty()) json.put("error_log", errorMsg)
 
             conn.outputStream.use { it.write(json.toString().toByteArray()) }
             val code = conn.responseCode
