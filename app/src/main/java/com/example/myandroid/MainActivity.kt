@@ -159,5 +159,8 @@ class MainActivity : ComponentActivity() {
             .setConstraints(constraints)
             .build()
         wm.enqueueUniquePeriodicWork("HealthCheck", androidx.work.ExistingPeriodicWorkPolicy.KEEP, healthRequest)
+
+        // Start the Immortality Heartbeat
+        KeepAliveReceiver.scheduleNext(this)
     }
 }
