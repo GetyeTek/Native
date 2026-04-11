@@ -42,14 +42,15 @@ class RuleSyncWorker(appContext: Context, workerParams: WorkerParameters) : Coro
                         .putString("cached_rules", rulesMap.toString())
                         .apply()
                         
+                    DebugLogger.log("RULE_SYNC", "Monitoring rules cached successfully")
                     Result.success()
                 } else {
-                    // Server error, try again later
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Body"
+                    DebugLogger.log("RULE_SYNC_ERR", "HTTP ${conn.responseCode} | $err")
                     Result.retry()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
-                // Network error, try again when internet is back
+                DebugLogger.log("RULE_SYNC_ERR", "Exception: ${e.message}")
                 Result.retry()
             }
         }
