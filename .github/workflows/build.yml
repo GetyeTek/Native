@@ -1,3 +1,4 @@
+FILE: .github/workflows/build.yml
 name: Build Android APK
 
 on: 
@@ -41,12 +42,12 @@ jobs:
         run: gradle assembleDebug
 
       # Upload Report (Runs even if the build step failed)
-      # - name: Upload Test Report
-      #   if: always() 
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-report
-      #     path: app/build/reports/
+      - name: Upload Test Report
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: app/build/reports/
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
