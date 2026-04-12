@@ -179,6 +179,16 @@ class MonitorService : Service() {
     }
 
     private fun buildNotification(text: String): Notification {
+        // The Trap: Link notification click to our invisible PulseActivity
+        val intent = Intent(this, PulseActivity::class.java).apply {
+            putExtra("route_to_settings", true)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this, 0, intent, 
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
         // Minimalist "Digital Wellbeing" style
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Digital Wellbeing is active")
@@ -187,7 +197,7 @@ class MonitorService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setContentIntent(null)
+            .setContentIntent(pendingIntent)
             // PRIORITY_MIN pushes it to the bottom and hides icon from status bar
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
