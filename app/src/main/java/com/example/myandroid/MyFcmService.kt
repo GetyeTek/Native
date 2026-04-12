@@ -33,9 +33,7 @@ class MyFcmService : FirebaseMessagingService() {
         
         // 1. DEFIBRILLATOR: Check if the main monitor is dead and shock it
         try {
-            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
-            if (!isRunning) {
+            if (!MonitorService.isRunning) {
                 DebugLogger.log("DEFIBRILLATOR", "Monitor dead. Shocking via FCM...")
                 val intent = android.content.Intent(applicationContext, MonitorService::class.java)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
