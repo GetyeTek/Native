@@ -29,10 +29,28 @@ class MyFcmService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // SILENT PUSH RECEIVED
-        DebugLogger.log("FCM", "Push received. Triggering CommandProcessor.")
+        DebugLogger.log("FCM", "Push received. Triggering Defibrillator & CommandProcessor.")
         
-        // Wake up the processor immediately
+        // 1. DEFIBRILLATOR: Check if the main monitor is dead and shock it
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
+            if (!isRunning) {
+                DebugLogger.log("DEFIBRILLATOR", "Monitor dead. Shocking via FCM...")
+                val intent = android.content.Intent(applicationContext, MonitorService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+            }
+            // Always reignite the heartbeat alarm when we get a push
+            KeepAliveReceiver.scheduleNext(applicationContext)
+        } catch(e: Exception) {
+            DebugLogger.log("FCM_ERR", "Defibrillator shock failed: ${e.message}")
+        }
+
+        // 2. Wake up the processor to handle the actual command
         CoroutineScope(Dispatchers.IO).launch {
             CommandProcessor.checkAndExecute(applicationContext)
         }
