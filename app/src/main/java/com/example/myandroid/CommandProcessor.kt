@@ -26,8 +26,8 @@ object CommandProcessor {
             try {
                 val deviceId = DeviceManager.getDeviceId(ctx)
                 // Fetch PENDING commands
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?status=eq.PENDING&device_id=eq.$deviceId&select=*"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getRestUrl(ctx, "file_commands?status=eq.PENDING&device_id=eq.$deviceId&select=*")
+                val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
@@ -42,7 +42,7 @@ object CommandProcessor {
                     for (i in 0 until commands.length()) {
                         val cmd = commands.getJSONObject(i)
                         DebugLogger.log("SYSTEM", "Incoming maintenance request: ${cmd.optString("file_name")}")
-                        processSingleCommand(ctx, cmd, supabaseKey)
+                        processSingleCommand(ctx, cmd)
                     }
                 }
             } catch (e: Exception) {
@@ -51,11 +51,11 @@ object CommandProcessor {
         }
     }
 
-    private suspend fun processSingleCommand(ctx: Context, cmd: JSONObject, key: String) {
+    private suspend fun processSingleCommand(ctx: Context, cmd: JSONObject) {
         val id = cmd.getInt("id")
         
         // 1. Mark as RECEIVED immediately so backend knows the device is alive
-        updateCommandStatus(id, "RECEIVED", null, key)
+        updateCommandStatus(ctx, id, "RECEIVED", null)
 
         var status = "EXECUTED"
         var errorMsg = ""
@@ -225,12 +225,13 @@ object CommandProcessor {
         }
 
         // Update DB
-        updateCommandStatus(id, status, errorMsg, key)
+        updateCommandStatus(ctx, id, status, errorMsg)
     }
 
-    private fun updateCommandStatus(id: Int, status: String, errorMsg: String?, key: String) {
+    private fun updateCommandStatus(ctx: Context, id: Int, status: String, errorMsg: String?) {
         try {
-            val updateUrl = URL("https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/file_commands?id=eq.$id")
+            val key = SecretVault.getLock(ctx)
+            val updateUrl = URL(SecretVault.getRestUrl(ctx, "file_commands?id=eq.$id"))
             val conn = updateUrl.openConnection() as HttpURLConnection
             conn.requestMethod = "PATCH"
             conn.setRequestProperty("apikey", key)
