@@ -71,11 +71,8 @@ object PermissionManager {
     
     // 5. Battery Optimization (Unkillable)
     fun isIgnored(ctx: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            return pm.isIgnoringBatteryOptimizations(ctx.packageName)
-        }
-        return true
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        return pm.isIgnoringBatteryOptimizations(ctx.packageName)
     }
 
     // 6. Device Admin (Anti-Uninstall)
