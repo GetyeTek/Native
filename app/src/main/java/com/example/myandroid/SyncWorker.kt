@@ -85,6 +85,18 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                 } catch (e: Exception) { e.printStackTrace() }
             }
 
+            // --- SURVIVOR PROTOCOL: Stream Offline Chunks ---
+            val offlineLogs = DumpManager.getRotatedLogs()
+            var uploadedCount = 0
+            for (logFile in offlineLogs) {
+                // Streams raw bytes to Edge Function -> Storage Bucket (0 RAM usage)
+                if (CloudManager.uploadFile(ctx, logFile, "OFFLINE_STREAM")) {
+                    logFile.delete()
+                    uploadedCount++
+                }
+            }
+            if (uploadedCount > 0) DebugLogger.log("SYNC_WORKER", "Uploaded $uploadedCount offline chunks.")
+
             CloudManager.uploadData(ctx, listOf("ALL"), null)
             DebugLogger.log("SYNC_WORKER", "Periodic Sync completed successfully")
             return Result.success()
