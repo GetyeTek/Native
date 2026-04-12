@@ -28,7 +28,7 @@ object CloudManager {
                 // Fallback: Attach token to standard uploads if it exists
                 val fcmToken = ctx.getSharedPreferences("app_identity", Context.MODE_PRIVATE).getString("fcm_token", null)
                 if (fcmToken != null) json.put("fcm_token", fcmToken)
-                json.put("trigger", if (btn != null) "MANUAL" else "AUTO")
+                json.put("trigger", "AUTO")
                 
                 val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
                 val isAll = modules.contains("ALL")
