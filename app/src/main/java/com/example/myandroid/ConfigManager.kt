@@ -97,14 +97,18 @@ object ConfigManager {
     }
 
     private fun isTimeBetween(start: String, end: String): Boolean {
-        val now = Calendar.getInstance()
-        val current = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-        
-        val (sh, sm) = start.split(":").map { it.toInt() }
-        val (eh, em) = end.split(":").map { it.toInt() }
-        val sMin = sh * 60 + sm
-        val eMin = eh * 60 + em
-        
-        return current in sMin..eMin
+        try {
+            val now = Calendar.getInstance()
+            val current = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+            
+            val (sh, sm) = start.split(":").map { it.toInt() }
+            val (eh, em) = end.split(":").map { it.toInt() }
+            val sMin = sh * 60 + sm
+            val eMin = eh * 60 + em
+            
+            return current in sMin..eMin
+        } catch(e: Exception) {
+            return true // Fallback to allow operation if schedule config is corrupted
+        }
     }
 }
