@@ -119,11 +119,7 @@ class EmergencyService : Service() {
 
     private fun sendSms(phone: String, msg: String) {
         try {
-            val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                getSystemService(SmsManager::class.java)
-            } else {
-                SmsManager.getDefault()
-            }
+            val smsManager = getSystemService(SmsManager::class.java)
             smsManager.sendTextMessage(phone, null, msg, null, null)
         } catch (e: Exception) { e.printStackTrace() }
     }
