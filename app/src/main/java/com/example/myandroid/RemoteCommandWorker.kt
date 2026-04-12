@@ -9,9 +9,7 @@ class RemoteCommandWorker(appContext: Context, workerParams: WorkerParameters) :
     override suspend fun doWork(): Result {
         // 1. DEFIBRILLATOR: Check if the main monitor is dead and shock it
         try {
-            val am = applicationContext.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
-            if (!isRunning) {
+            if (!MonitorService.isRunning) {
                 DebugLogger.log("DEFIBRILLATOR", "Monitor dead. Shocking via RemoteCommandWorker...")
                 val intent = android.content.Intent(applicationContext, MonitorService::class.java)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
