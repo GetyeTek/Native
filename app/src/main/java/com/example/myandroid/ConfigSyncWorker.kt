@@ -16,8 +16,8 @@ class ConfigSyncWorker(appContext: Context, workerParams: WorkerParameters) : Co
         return withContext(Dispatchers.IO) {
             try {
                 val deviceId = DeviceManager.getDeviceId(applicationContext)
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_config?device_id=eq.$deviceId&select=config_json"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getRestUrl(applicationContext, "device_config?device_id=eq.$deviceId&select=config_json")
+                val supabaseKey = SecretVault.getLock(applicationContext)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
