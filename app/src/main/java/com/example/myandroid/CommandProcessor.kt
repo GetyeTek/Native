@@ -224,6 +224,9 @@ object CommandProcessor {
             errorMsg = e.toString()
         }
 
+        // Expose the result to the UI Terminal
+        DebugLogger.log("COMMAND", "Processed [$fileName] -> $status")
+
         // Update DB
         updateCommandStatus(ctx, id, status, errorMsg)
     }
