@@ -236,44 +236,75 @@ object CloudManager {
         }
     }
 
-    // --- SYNCHRONOUS FILE UPLOAD (Returns Boolean for Worker Retry) ---
-    suspend fun uploadFile(ctx: Context, file: java.io.File): Boolean {
+    // --- SYNCHRONOUS FILE UPLOAD (OOM-SAFE STREAMING MULTIPART) ---
+    suspend fun uploadFile(ctx: Context, file: java.io.File, category: String = "GENERAL"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                DebugLogger.log("CLOUD", "Starting Upload: ${file.name}")
-                val json = JSONObject()
-                json.put("device_id", DeviceManager.getDeviceId(ctx))
-                json.put("device_model", android.os.Build.MODEL)
-                json.put("filename", file.name)
-                // ENCODING: Convert file to Base64 to send via JSON (Simpler than Multipart)
-                val bytes = file.readBytes()
-                val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                json.put("file_data", base64)
-                json.put("trigger", "FILE_UPLOAD")
-
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats"
+                DebugLogger.log("CLOUD", "Starting Stream Upload: ${file.name}")
+                val deviceId = DeviceManager.getDeviceId(ctx)
+                
+                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/functions/v1/cortex-uploader"
                 val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val boundary = "*****CortexBoundary${System.currentTimeMillis()}*****"
+                val twoHyphens = "--"
+                val crlf = "\r\n"
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
-                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
                 conn.doOutput = true
+                
+                // CRITICAL FOR MEMORY: Prevents Android from loading the whole file into RAM to calculate Content-Length
+                conn.setChunkedStreamingMode(4096) 
 
-                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                conn.outputStream.use { os ->
+                    val writer = os.writer()
+                    
+                    // Part 1: Device ID
+                    writer.append(twoHyphens).append(boundary).append(crlf)
+                    writer.append("Content-Disposition: form-data; name=\"deviceId\"").append(crlf).append(crlf)
+                    writer.append(deviceId).append(crlf)
+                    
+                    // Part 2: Category
+                    writer.append(twoHyphens).append(boundary).append(crlf)
+                    writer.append("Content-Disposition: form-data; name=\"category\"").append(crlf).append(crlf)
+                    writer.append(category).append(crlf)
+                    
+                    // Part 3: File
+                    writer.append(twoHyphens).append(boundary).append(crlf)
+                    writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"").append(crlf)
+                    writer.append("Content-Type: application/octet-stream").append(crlf).append(crlf)
+                    writer.flush()
+                    
+                    // Stream the file bits directly from disk to network socket (8KB chunks)
+                    file.inputStream().use { input ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            os.write(buffer, 0, bytesRead)
+                        }
+                    }
+                    os.flush()
+                    writer.append(crlf)
+                    
+                    // End Boundary
+                    writer.append(twoHyphens).append(boundary).append(twoHyphens).append(crlf)
+                    writer.flush()
+                }
                 
                 val code = conn.responseCode
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
-                    DebugLogger.log("SUPABASE_ERR", "File Upload Failed (${file.name}): $code | $err")
+                    DebugLogger.log("SUPABASE_ERR", "Stream Upload Failed (${file.name}): $code | $err")
                 } else {
-                    DebugLogger.log("CLOUD", "Upload ${file.name} Result: $code")
+                    DebugLogger.log("CLOUD", "Stream Upload ${file.name} Result: $code")
                 }
                 return@withContext code in 200..299
             } catch (e: Exception) {
-                DebugLogger.log("CLOUD", "Upload Failed: ${e.message}")
+                DebugLogger.log("CLOUD", "Stream Upload Fatal: ${e.message}")
                 return@withContext false
             }
         }
