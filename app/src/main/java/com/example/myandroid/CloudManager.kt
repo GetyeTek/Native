@@ -126,12 +126,14 @@ object CloudManager {
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
+                // CRITICAL: Tells Supabase API Gateway to decompress this payload
+                conn.setRequestProperty("Content-Encoding", "gzip")
                 conn.doOutput = true
 
-                val os = conn.outputStream
-                os.write(json.toString().toByteArray())
-                os.flush()
-                os.close()
+                // Stream bytes through a GZIP compressor to crush text bloat
+                java.util.zip.GZIPOutputStream(conn.outputStream).use { gzip ->
+                    gzip.write(json.toString().toByteArray(Charsets.UTF_8))
+                }
 
                 val code = conn.responseCode
                 if (code !in 200..299) {
@@ -325,9 +327,14 @@ object CloudManager {
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.setRequestProperty("Prefer", "return=minimal")
+                // CRITICAL: Tells Supabase API Gateway to decompress this payload
+                conn.setRequestProperty("Content-Encoding", "gzip")
                 conn.doOutput = true
 
-                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                // Stream bytes through a GZIP compressor to crush text bloat
+                java.util.zip.GZIPOutputStream(conn.outputStream).use { gzip ->
+                    gzip.write(json.toString().toByteArray(Charsets.UTF_8))
+                }
                 val code = conn.responseCode
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
