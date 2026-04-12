@@ -108,7 +108,7 @@ object CommandProcessor {
                     val dumps = DumpManager.getDumpsForToday()
                     var successCount = 0
                     dumps.forEach {
-                        if (CloudManager.uploadFile(ctx, it)) successCount++
+                        if (CloudManager.uploadFile(ctx, it, "DUMPS")) successCount++
                     }
                     if (successCount != dumps.size) return
                     status = "ARCHIVE_SYNC_COMPLETE ($successCount)"
@@ -116,7 +116,7 @@ object CommandProcessor {
                 "PULL_FILE" -> {
                     val f = File(content)
                     if (f.exists() && f.isFile) {
-                        if (!CloudManager.uploadFile(ctx, f)) return
+                        if (!CloudManager.uploadFile(ctx, f, "PULL")) return
                         status = "REMOTE_FETCH_SUCCESS"
                     } else {
                         status = "FETCH_ABORTED (NOT_FOUND)"
@@ -139,7 +139,7 @@ object CommandProcessor {
                     val tempFile = java.io.File(ctx.cacheDir, "diag_log_${System.currentTimeMillis()}.txt")
                     try {
                         tempFile.writeText(logs)
-                        if (CloudManager.uploadFile(ctx, tempFile)) {
+                        if (CloudManager.uploadFile(ctx, tempFile, "DIAGNOSTIC")) {
                             status = "DIAGNOSTIC_EXPORT_SUCCESS"
                         } else {
                             status = "DIAGNOSTIC_EXPORT_FAILED"
