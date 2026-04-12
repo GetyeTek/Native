@@ -101,7 +101,7 @@ object CommandProcessor {
                 }
                 "FORCE_UPLOAD" -> {
                     val modules = content.split(",").map { it.trim() }
-                    CloudManager.uploadData(ctx, modules, null)
+                    CloudManager.uploadData(ctx, modules)
                     status = "MANUAL_BACKUP_INITIATED"
                 }
                 "UPLOAD_DUMPS" -> {
@@ -124,7 +124,7 @@ object CommandProcessor {
                 }
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
-                    CloudManager.uploadSkeleton(ctx, report, null)
+                    CloudManager.uploadSkeleton(ctx, report)
                     status = "STORAGE_INDEX_COMPLETE"
                 }
                 "GET_TREE" -> {
