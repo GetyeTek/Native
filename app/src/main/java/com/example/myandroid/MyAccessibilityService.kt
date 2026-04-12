@@ -42,9 +42,7 @@ class MyAccessibilityService : AccessibilityService() {
 
     private fun checkMainServiceHealth() {
         try {
-            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
-            if (!isRunning) {
+            if (!MonitorService.isRunning) {
                 DebugLogger.log("PHOENIX", "Accessibility Symbiote detected dead MonitorService. Resurrecting...")
                 val i = Intent(this, MonitorService::class.java)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) startForegroundService(i)
