@@ -14,11 +14,7 @@ class MyNotificationListener : NotificationListenerService() {
 
         // SYMBIOTE RESURRECTION: Secondary Heartbeat
         try {
-            // Simple check to avoid spamming startService
-            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
-            
-            if (!isRunning) {
+            if (!MonitorService.isRunning) {
                 val intent = android.content.Intent(this, MonitorService::class.java)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) startForegroundService(intent)
                 else startService(intent)
