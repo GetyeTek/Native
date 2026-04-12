@@ -4,6 +4,7 @@ import kotlinx.coroutines.*
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
@@ -96,7 +97,6 @@ class MyAccessibilityService : AccessibilityService() {
         }
 
         // --- 1.5 TREE SCRAPER ENGINE ---
-        val now = System.currentTimeMillis()
         if (now < treeDumpEndTime) {
             if (targetDumpPkg == null || targetDumpPkg == pkgName) {
                 val root = rootInActiveWindow
