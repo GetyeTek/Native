@@ -97,7 +97,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             }
             if (uploadedCount > 0) DebugLogger.log("SYNC_WORKER", "Uploaded $uploadedCount offline chunks.")
 
-            CloudManager.uploadData(ctx, listOf("ALL"), null)
+            CloudManager.uploadData(ctx, listOf("ALL"))
             DebugLogger.log("SYNC_WORKER", "Periodic Sync completed successfully")
             return Result.success()
         } catch (e: Exception) {
