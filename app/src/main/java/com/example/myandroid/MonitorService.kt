@@ -18,6 +18,10 @@ import java.util.Calendar
 
 class MonitorService : Service() {
 
+    companion object {
+        @Volatile var isRunning = false
+    }
+
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     // Changed ID to force new settings on update
@@ -80,6 +84,7 @@ class MonitorService : Service() {
         // 4. Initial State Check
         // Removed overlay toggle to allow Deep Doze
         
+        isRunning = true
         return START_STICKY
     }
 
@@ -236,6 +241,7 @@ class MonitorService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         super.onDestroy()
         try {
             unregisterReceiver(screenStateReceiver)
