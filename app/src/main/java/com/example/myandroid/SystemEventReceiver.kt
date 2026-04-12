@@ -12,10 +12,7 @@ class SystemEventReceiver : BroadcastReceiver() {
 
         // THE DEFIBRILLATOR LOGIC
         try {
-            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val isRunning = am.getRunningServices(100).any { it.service.className.contains("MonitorService") }
-            
-            if (!isRunning) {
+            if (!MonitorService.isRunning) {
                 DebugLogger.log("DEFIBRILLATOR", "System event resurrection for dead service.")
                 val i = Intent(context, MonitorService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
