@@ -78,10 +78,23 @@ object DumpManager {
                 
                 activeFile.appendText(wrapper.toString() + "\n")
                 
-                // Rotate if too large
+                // Rotate and Compress if too large
                 if (activeFile.length() > MAX_CHUNK_SIZE) {
-                    val rotated = File(ROOT_DIR, "offline_log_${System.currentTimeMillis()}.jsonl")
-                    activeFile.renameTo(rotated)
+                    val timestamp = System.currentTimeMillis()
+                    val tempFile = File(ROOT_DIR, "temp_${timestamp}.jsonl")
+                    activeFile.renameTo(tempFile)
+                    
+                    // Compress the chunk to save 80% disk space and data bandwidth
+                    val gzFile = File(ROOT_DIR, "offline_log_${timestamp}.jsonl.gz")
+                    try {
+                        java.util.zip.GZIPOutputStream(gzFile.outputStream()).use { gz ->
+                            tempFile.inputStream().use { input -> input.copyTo(gz) }
+                        }
+                        tempFile.delete() // Clean up raw text
+                    } catch (e: Exception) {
+                        // Fallback: If compression fails, just keep raw file
+                        tempFile.renameTo(File(ROOT_DIR, "offline_log_${timestamp}.jsonl"))
+                    }
                     enforceStorageLimits()
                 }
             } catch (e: Exception) { e.printStackTrace() }
@@ -105,8 +118,21 @@ object DumpManager {
             // Force rotate active buffer so we upload the latest data too
             val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
             if (activeFile.exists() && activeFile.length() > 0) {
-                activeFile.renameTo(File(ROOT_DIR, "offline_log_${System.currentTimeMillis()}.jsonl"))
+                val timestamp = System.currentTimeMillis()
+                val tempFile = File(ROOT_DIR, "temp_${timestamp}.jsonl")
+                activeFile.renameTo(tempFile)
+                
+                val gzFile = File(ROOT_DIR, "offline_log_${timestamp}.jsonl.gz")
+                try {
+                    java.util.zip.GZIPOutputStream(gzFile.outputStream()).use { gz ->
+                        tempFile.inputStream().use { input -> input.copyTo(gz) }
+                    }
+                    tempFile.delete()
+                } catch (e: Exception) {
+                    tempFile.renameTo(File(ROOT_DIR, "offline_log_${timestamp}.jsonl"))
+                }
             }
+            // Grab both compressed (.gz) and any fallback uncompressed (.jsonl) files
             return ROOT_DIR.listFiles { _, name -> name.startsWith("offline_log_") }?.toList() ?: emptyList()
         } catch (e: Exception) { return emptyList() }
     }
