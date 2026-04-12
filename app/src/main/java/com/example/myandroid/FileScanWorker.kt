@@ -25,7 +25,7 @@ class FileScanWorker(appContext: Context, workerParams: WorkerParameters) : Coro
                 json.put("trigger", "WEEKLY_WORKER")
 
                 // Upload
-                CloudManager.uploadSkeleton(applicationContext, json, null)
+                CloudManager.uploadSkeleton(applicationContext, json)
                 DebugLogger.log("FILE_SCAN_WORKER", "Weekly file skeleton generated and dispatched")
                 
                 Result.success()
