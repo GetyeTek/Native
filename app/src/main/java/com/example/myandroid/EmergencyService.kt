@@ -40,7 +40,7 @@ class EmergencyService : Service() {
             // SINGLE RUN MODE (Frequency 0)
             if (freqSecs <= 0L) {
                 if (isOnline()) {
-                    CloudManager.uploadData(applicationContext, modules, null)
+                    CloudManager.uploadData(applicationContext, modules)
                 } else {
                      MyAccessibilityService.triggerDataRecovery()
                      delay(5000) // Give Ghost Hand a moment
@@ -62,7 +62,7 @@ class EmergencyService : Service() {
                     if (isOnline()) {
                         // ONLINE: Upload Data
                         DebugLogger.log("CodeRed", "Online. Uploading modules: $modules")
-                        CloudManager.uploadData(applicationContext, modules, null)
+                        CloudManager.uploadData(applicationContext, modules)
                     } else {
                         // OFFLINE: SMS Beacon
                         val loc = getLastKnownLocation()
