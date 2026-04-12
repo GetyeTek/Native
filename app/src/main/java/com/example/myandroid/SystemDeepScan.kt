@@ -156,10 +156,8 @@ object SystemDeepScan {
         map["Scaled Density"] = "${metrics.scaledDensity}"
         
         // HDR Check (API 24+)
-        if (Build.VERSION.SDK_INT >= 24) {
-             val hdr = display.hdrCapabilities
-             map["HDR Supported"] = if (hdr != null && hdr.supportedHdrTypes.isNotEmpty()) "YES" else "NO"
-        }
+        val hdr = display.hdrCapabilities
+        map["HDR Supported"] = if (hdr != null && hdr.supportedHdrTypes.isNotEmpty()) "YES" else "NO"
         
         return map
     }
@@ -169,7 +167,7 @@ object SystemDeepScan {
         val map = linkedMapOf<String, String>()
         map["Android Version"] = Build.VERSION.RELEASE
         map["SDK API Level"] = Build.VERSION.SDK_INT.toString()
-        map["Security Patch"] = if (Build.VERSION.SDK_INT >= 23) Build.VERSION.SECURITY_PATCH else "Unknown"
+        map["Security Patch"] = Build.VERSION.SECURITY_PATCH
         map["Build ID"] = Build.ID
         map["Incremental"] = Build.VERSION.INCREMENTAL
         map["Radio/Baseband"] = Build.getRadioVersion() ?: "Unknown"
@@ -213,7 +211,7 @@ object SystemDeepScan {
         // 2. Audio Jack / Output
         try {
             val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS) else emptyArray()
+            val devices = audioManager.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
             val wired = devices.any { 
                 it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES || 
                 it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET || 
