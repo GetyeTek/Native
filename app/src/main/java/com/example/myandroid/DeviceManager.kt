@@ -183,9 +183,7 @@ object DeviceManager {
 
         // 3. Battery / Immortality Status
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        val isIgnored = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            pm.isIgnoringBatteryOptimizations(ctx.packageName)
-        } else true
+        val isIgnored = pm.isIgnoringBatteryOptimizations(ctx.packageName)
         json.put("battery_optimization_ignored", isIgnored)
         
         // 4. App Interaction
