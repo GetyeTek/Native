@@ -117,8 +117,8 @@ object CloudManager {
                 json.put("summary_stats", summary)
 
                 // SEND TO SUPABASE
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getRestUrl(ctx, "device_stats")
+                val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
@@ -207,8 +207,8 @@ object CloudManager {
                 summary.put("status", "ONLINE")
                 json.put("summary_stats", summary)
 
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/device_stats"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getRestUrl(ctx, "device_stats")
+                val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
@@ -239,8 +239,8 @@ object CloudManager {
                 DebugLogger.log("CLOUD", "Starting Stream Upload: ${file.name}")
                 val deviceId = DeviceManager.getDeviceId(ctx)
                 
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/functions/v1/cortex-uploader"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getUploaderUrl(ctx)
+                val supabaseKey = SecretVault.getLock(ctx)
                 val boundary = "*****CortexBoundary${System.currentTimeMillis()}*****"
                 val twoHyphens = "--"
                 val crlf = "\r\n"
@@ -311,8 +311,8 @@ object CloudManager {
             try {
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
                 
-                val supabaseUrl = "https://xvldfsmxskhemkslsbym.supabase.co/rest/v1/storage_backups"
-                val supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
+                val supabaseUrl = SecretVault.getRestUrl(ctx, "storage_backups")
+                val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
