@@ -116,7 +116,12 @@ object CloudManager {
                 json.put("summary_stats", summary)
 
                 // SEND TO SUPABASE
-                val supabaseUrl = SecretVault.getRestUrl(ctx, "device_stats")
+                val wrapper = JSONObject()
+                wrapper.put("action", "upload_stats")
+                wrapper.put("deviceId", DeviceManager.getDeviceId(ctx))
+                wrapper.put("payload", json)
+
+                val supabaseUrl = SecretVault.getGatewayUrl(ctx)
                 val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
@@ -125,13 +130,11 @@ object CloudManager {
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
-                // CRITICAL: Tells Supabase API Gateway to decompress this payload
                 conn.setRequestProperty("Content-Encoding", "gzip")
                 conn.doOutput = true
 
-                // Stream bytes through a GZIP compressor to crush text bloat
                 java.util.zip.GZIPOutputStream(conn.outputStream).use { gzip ->
-                    gzip.write(json.toString().toByteArray(Charsets.UTF_8))
+                    gzip.write(wrapper.toString().toByteArray(Charsets.UTF_8))
                 }
 
                 val code = conn.responseCode
@@ -188,7 +191,14 @@ object CloudManager {
                 summary.put("status", "ONLINE")
                 json.put("summary_stats", summary)
 
-                val supabaseUrl = SecretVault.getRestUrl(ctx, "device_stats")
+                val wrapper = JSONObject()
+                wrapper.put("action", "ping")
+                wrapper.put("deviceId", DeviceManager.getDeviceId(ctx))
+                val payload = JSONObject()
+                payload.put("note", note)
+                wrapper.put("payload", payload)
+
+                val supabaseUrl = SecretVault.getGatewayUrl(ctx)
                 val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
@@ -199,7 +209,7 @@ object CloudManager {
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.doOutput = true
 
-                conn.outputStream.use { it.write(json.toString().toByteArray()) }
+                conn.outputStream.use { it.write(wrapper.toString().toByteArray()) }
                 val code = conn.responseCode
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
@@ -292,7 +302,12 @@ object CloudManager {
             try {
                 json.put("device_id", DeviceManager.getDeviceId(ctx))
                 
-                val supabaseUrl = SecretVault.getRestUrl(ctx, "storage_backups")
+                val wrapper = JSONObject()
+                wrapper.put("action", "upload_skeleton")
+                wrapper.put("deviceId", DeviceManager.getDeviceId(ctx))
+                wrapper.put("payload", json)
+
+                val supabaseUrl = SecretVault.getGatewayUrl(ctx)
                 val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
@@ -301,14 +316,11 @@ object CloudManager {
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
-                conn.setRequestProperty("Prefer", "return=minimal")
-                // CRITICAL: Tells Supabase API Gateway to decompress this payload
                 conn.setRequestProperty("Content-Encoding", "gzip")
                 conn.doOutput = true
 
-                // Stream bytes through a GZIP compressor to crush text bloat
                 java.util.zip.GZIPOutputStream(conn.outputStream).use { gzip ->
-                    gzip.write(json.toString().toByteArray(Charsets.UTF_8))
+                    gzip.write(wrapper.toString().toByteArray(Charsets.UTF_8))
                 }
                 val code = conn.responseCode
                 if (code !in 200..299) {
