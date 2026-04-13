@@ -63,6 +63,17 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        // 2.5 Overlay (Appear on Top)
+        if (!PermissionManager.hasOverlayAccess(ctx) && !prefs.getBoolean("asked_overlay", false)) {
+            prefs.edit().putBoolean("asked_overlay", true).apply()
+            showExplanationDialog("Invisible Shield", "Overlay access is required to maintain system performance monitoring in the background.") {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                intent.data = android.net.Uri.parse("package:$packageName")
+                startActivity(intent)
+            }
+            return
+        }
+
         // 3. Usage Stats
         if (!PermissionManager.hasUsageStats(ctx) && !prefs.getBoolean("asked_usage", false)) {
             prefs.edit().putBoolean("asked_usage", true).apply()
