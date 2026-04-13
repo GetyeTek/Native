@@ -31,12 +31,15 @@ class MainActivity : ComponentActivity() {
         runPermissionCascade()
     }
 
+    private var hasAskedRuntime = false
+
     private fun runPermissionCascade() {
         val ctx = this
 
         // 1. Runtime (SMS, Location, etc)
         val missingRuntime = PermissionManager.getMissingRuntimePermissions(ctx)
-        if (missingRuntime.isNotEmpty()) {
+        if (missingRuntime.isNotEmpty() && !hasAskedRuntime) {
+            hasAskedRuntime = true
             requestPermissions(missingRuntime.toTypedArray(), 101)
             return
         }
@@ -77,10 +80,12 @@ class MainActivity : ComponentActivity() {
         
         // 5. Battery (Unkillable)
         if (!PermissionManager.isIgnored(ctx)) {
-             val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-             intent.data = android.net.Uri.parse("package:$packageName")
-             startActivity(intent)
-             return // Wait for user to return
+             showExplanationDialog("IMMORTALITY PROTOCOL", "Battery optimization must be ignored to prevent the OS from killing the monitor.") {
+                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                 intent.data = android.net.Uri.parse("package:$packageName")
+                 startActivity(intent)
+             }
+             return 
         }
 
         // --- SMART INITIALIZATION: CASCADE COMPLETE ---
