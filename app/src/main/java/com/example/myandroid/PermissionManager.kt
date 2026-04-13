@@ -75,6 +75,12 @@ object PermissionManager {
         return pm.isIgnoringBatteryOptimizations(ctx.packageName)
     }
 
+    // 5.5 DND Access (Bypass Silent Mode)
+    fun hasDndAccess(ctx: Context): Boolean {
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        return nm.isNotificationPolicyAccessGranted
+    }
+
     // 6. Device Admin (Anti-Uninstall)
     fun isAdmin(ctx: Context): Boolean {
         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
