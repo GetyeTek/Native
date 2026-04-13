@@ -76,6 +76,7 @@ fun InspectorDashboard(ctx: Context) {
                 "usage" to PermissionManager.hasUsageStats(ctx),
                 "files" to PermissionManager.hasAllFilesAccess(ctx),
                 "notif" to PermissionManager.hasNotificationListener(ctx),
+                "dnd" to PermissionManager.hasDndAccess(ctx),
                 "batt" to PermissionManager.isIgnored(ctx),
                 "admin" to PermissionManager.isAdmin(ctx)
             )
@@ -253,6 +254,7 @@ fun PermissionsCard(ctx: Context, permState: Map<String, Boolean>) {
         if (!permState["usage"]!!) PermRow("Usage Stats", "Screen time analytics") { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
         if (!permState["files"]!!) PermRow("Storage Access", "File system reports") { val i = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
         if (!permState["notif"]!!) PermRow("Notification Access", "Message sync") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+        if (!permState["dnd"]!!) PermRow("Do Not Disturb", "Bypass silent mode") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
         if (!permState["batt"]!!) PermRow("Background Processing", "Unrestricted data sync") { val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
     }
 }
