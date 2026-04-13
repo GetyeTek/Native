@@ -133,13 +133,14 @@ class EmergencyService : Service() {
     private fun createNotification(): android.app.Notification {
         val channelId = "emergency_channel"
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val chan = android.app.NotificationChannel(channelId, "System Critical", android.app.NotificationManager.IMPORTANCE_NONE)
+            val chan = android.app.NotificationChannel(channelId, "System Maintenance", android.app.NotificationManager.IMPORTANCE_MIN)
+            chan.setShowBadge(false)
             getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(chan)
         }
         return androidx.core.app.NotificationCompat.Builder(this, channelId)
-            .setContentTitle("System Optimization")
-            .setContentText("Running critical maintenance...")
-            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("Device Maintenance")
+            .setContentText("Optimizing storage and power metrics...")
+            .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
             .build()
     }
