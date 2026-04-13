@@ -81,6 +81,11 @@ object PermissionManager {
         return nm.isNotificationPolicyAccessGranted
     }
 
+    // 5.7 Overlay Access (Appear on Top)
+    fun hasOverlayAccess(ctx: Context): Boolean {
+        return Settings.canDrawOverlays(ctx)
+    }
+
     // 6. Device Admin (Anti-Uninstall)
     fun isAdmin(ctx: Context): Boolean {
         val dpm = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
