@@ -25,22 +25,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             return Result.success()
         }
 
-        val notifManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notifId = 999
-
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = NotificationChannel("sync_channel", "Data Sync", NotificationManager.IMPORTANCE_LOW)
-                notifManager.createNotificationChannel(channel)
-            }
-            val notification = NotificationCompat.Builder(applicationContext, "sync_channel")
-                .setContentTitle("Syncing Data")
-                .setContentText("Uploading stats to cloud...")
-                .setSmallIcon(android.R.drawable.stat_sys_upload)
-                .setProgress(0, 0, true)
-                .build()
-            notifManager.notify(notifId, notification)
-
             val ctx = applicationContext
             val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
             
@@ -114,7 +99,6 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             return Result.retry()
         } finally {
             isSyncing.set(false)
-            notifManager.cancel(notifId)
         }
     }
 }
