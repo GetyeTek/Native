@@ -50,7 +50,6 @@ fun InspectorDashboard(ctx: Context) {
     // State Management
     var selectedDetail by remember { mutableStateOf<String?>(null) }
     var showConsole by remember { mutableStateOf(false) }
-    var showAuthDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -85,16 +84,6 @@ fun InspectorDashboard(ctx: Context) {
     val missingPerms = permState.filter { !it.value }.keys
     val allGranted = missingPerms.isEmpty()
 
-    if (showAuthDialog) {
-        AuthDialog(
-            onDismiss = { showAuthDialog = false },
-            onSuccess = { 
-                showAuthDialog = false
-                showConsole = true 
-            }
-        )
-    }
-
     if (showConsole) DebugConsole(ctx) { showConsole = false }
 
     Box(modifier = Modifier.fillMaxSize().background(BgSlate)) {
@@ -107,7 +96,7 @@ fun InspectorDashboard(ctx: Context) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 0. HEADER
-            Header { showAuthDialog = true }
+            Header { showConsole = true }
             Spacer(modifier = Modifier.height(8.dp))
 
             // 0.5 PERFORMANCE INDEX
