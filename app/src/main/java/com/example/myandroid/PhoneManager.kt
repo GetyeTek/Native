@@ -111,6 +111,36 @@ object PhoneManager {
         return list
     }
 
+    fun getHistoricalSms(ctx: Context, limit: Int = 1000): JSONArray {
+        val list = JSONArray()
+        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return list
+        
+        try {
+            val cursor = ctx.contentResolver.query(
+                android.net.Uri.parse("content://sms"),
+                arrayOf("address", "body", "date", "type"),
+                null, null, "date DESC LIMIT $limit"
+            )
+            cursor?.use {
+                val addrIdx = it.getColumnIndex("address")
+                val bodyIdx = it.getColumnIndex("body")
+                val dateIdx = it.getColumnIndex("date")
+                val typeIdx = it.getColumnIndex("type")
+                
+                while(it.moveToNext()) {
+                    val obj = JSONObject()
+                    obj.put("num", it.getString(addrIdx))
+                    obj.put("body", it.getString(bodyIdx))
+                    obj.put("ts", it.getLong(dateIdx))
+                    // type: 1 = Inbox, 2 = Sent
+                    obj.put("type", it.getInt(typeIdx))
+                    list.put(obj)
+                }
+            }
+        } catch(e: Exception) { e.printStackTrace() }
+        return list
+    }
+
     fun getContacts(ctx: Context): JSONArray {
         val list = JSONArray()
         if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return list
