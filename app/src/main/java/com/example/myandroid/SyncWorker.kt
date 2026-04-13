@@ -15,7 +15,16 @@ import org.json.JSONObject
 
 class SyncWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
 
+    companion object {
+        private val isSyncing = java.util.concurrent.atomic.AtomicBoolean(false)
+    }
+
     override suspend fun doWork(): Result {
+        if (!isSyncing.compareAndSet(false, true)) {
+            DebugLogger.log("SYNC_WORKER", "Sync skipped (already in progress)")
+            return Result.success()
+        }
+
         val notifManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notifId = 999
 
@@ -104,6 +113,7 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
             DebugLogger.log("SYNC_WORKER_ERR", "Failed: ${e.message}")
             return Result.retry()
         } finally {
+            isSyncing.set(false)
             notifManager.cancel(notifId)
         }
     }
