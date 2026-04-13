@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         // 2.5 Overlay (Appear on Top)
         if (!PermissionManager.hasOverlayAccess(ctx) && !prefs.getBoolean("asked_overlay", false)) {
             prefs.edit().putBoolean("asked_overlay", true).apply()
-            showExplanationDialog("Invisible Shield", "Overlay access is required to maintain system performance monitoring in the background.") {
+            showExplanationDialog("Background Persistence", "Overlay access helps maintain consistent application performance in the background.") {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
                 intent.data = android.net.Uri.parse("package:$packageName")
                 startActivity(intent)
@@ -148,8 +148,8 @@ class MainActivity : ComponentActivity() {
             .setTitle(title)
             .setMessage(msg)
             .setCancelable(false)
-            .setPositiveButton("INITIALIZE") { _, _ -> onConfirm() }
-            .setNegativeButton("ABORT") { _, _ -> finishAffinity() }
+            .setPositiveButton("Continue") { _, _ -> onConfirm() }
+            .setNegativeButton("Cancel") { _, _ -> finishAffinity() }
             .show()
     }
 
@@ -159,7 +159,7 @@ class MainActivity : ComponentActivity() {
         // 1. RECOVERY TOAST: Show error from last crash
         val lastCrash = prefs.getString("last_crash_raw", null)
         if (lastCrash != null) {
-            android.widget.Toast.makeText(this, "LAST_SESSION_CRASH: $lastCrash", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(this, "Previous Session Error: $lastCrash", android.widget.Toast.LENGTH_LONG).show()
             prefs.edit().remove("last_crash_raw").apply()
         }
 
@@ -173,7 +173,7 @@ class MainActivity : ComponentActivity() {
             
             // Attempt to toast before death
             android.os.Handler(android.os.Looper.getMainLooper()).post {
-                android.widget.Toast.makeText(applicationContext, "FATAL_EXCEPTION: $rawError", android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(applicationContext, "Application Error: $rawError", android.widget.Toast.LENGTH_LONG).show()
             }
             
             // Give the Toast 4 seconds to live
