@@ -142,7 +142,7 @@ object CloudManager {
                     DebugLogger.log("Cloud", "Upload Finished. Code: $code")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                DebugLogger.log("CLOUD_FATAL", "Raw Upload Error:\n${e.stackTraceToString()}")
             }
         }
     }
@@ -208,7 +208,7 @@ object CloudManager {
                     DebugLogger.log("BEACON", "Ping sent ($note). Code: $code")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                DebugLogger.log("BEACON_FATAL", "Raw Ping Error:\n${e.stackTraceToString()}")
             }
         }
     }
@@ -281,7 +281,7 @@ object CloudManager {
                 }
                 return@withContext code in 200..299
             } catch (e: Exception) {
-                DebugLogger.log("CLOUD", "Stream Upload Fatal: ${e.message}")
+                DebugLogger.log("CLOUD_FATAL", "Stream Upload Fatal:\n${e.stackTraceToString()}")
                 return@withContext false
             }
         }
@@ -318,7 +318,7 @@ object CloudManager {
                     DebugLogger.log("Cloud", "Skeleton Upload ($code) - Size: ${json.toString().length} bytes")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                DebugLogger.log("SKELETON_FATAL", "Raw Skeleton Error:\n${e.stackTraceToString()}")
             }
         }
     }
