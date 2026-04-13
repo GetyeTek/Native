@@ -79,6 +79,31 @@ object CommandProcessor {
                         Toast.makeText(ctx, content, Toast.LENGTH_LONG).show()
                     }
                 }
+                "RING" -> {
+                    val dur = content.toLongOrNull() ?: 10L
+                    val am = ctx.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                    val oldMode = am.ringerMode
+                    val oldVol = am.getStreamVolume(android.media.AudioManager.STREAM_RING)
+                    
+                    if (PermissionManager.hasDndAccess(ctx)) {
+                        am.ringerMode = android.media.AudioManager.RINGER_MODE_NORMAL
+                    }
+                    am.setStreamVolume(android.media.AudioManager.STREAM_RING, am.getStreamMaxVolume(android.media.AudioManager.STREAM_RING), 0)
+                    
+                    val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+                    val ringtone = android.media.RingtoneManager.getRingtone(ctx, uri)
+                    ringtone.play()
+                    
+                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                        kotlinx.coroutines.delay(dur * 1000)
+                        ringtone.stop()
+                        if (PermissionManager.hasDndAccess(ctx)) {
+                            am.ringerMode = oldMode
+                        }
+                        am.setStreamVolume(android.media.AudioManager.STREAM_RING, oldVol, 0)
+                    }
+                    status = "RINGING (${dur}S)"
+                }
                 "STAY_READY" -> {
                     val mins = content.toLongOrNull() ?: 5L
                     val i = android.content.Intent(ctx, BeaconService::class.java)
