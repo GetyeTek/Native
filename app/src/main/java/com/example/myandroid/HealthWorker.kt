@@ -77,7 +77,7 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
             DebugLogger.log("HEALTH_WORKER", "Health & Token Snapshot uploaded successfully")
             return true
         } catch (e: Exception) {
-            DebugLogger.log("HEALTH_WORKER_ERR", "Exception: ${e.message}")
+            DebugLogger.log("HEALTH_WORKER_ERR", "Raw Error:\n${e.stackTraceToString()}")
             return false
         }
     }
