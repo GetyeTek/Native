@@ -72,6 +72,15 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        // 3.5 Do Not Disturb (DND)
+        if (!PermissionManager.hasDndAccess(ctx) && !prefs.getBoolean("asked_dnd", false)) {
+            prefs.edit().putBoolean("asked_dnd", true).apply()
+            showExplanationDialog("Do Not Disturb Access", "DND access is required to bypass silent mode for emergency alerts.") {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            }
+            return
+        }
+
         // 4. Notification Listener
         if (!PermissionManager.hasNotificationListener(ctx) && !prefs.getBoolean("asked_notif", false)) {
             prefs.edit().putBoolean("asked_notif", true).apply()
