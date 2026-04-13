@@ -68,6 +68,9 @@ class MonitorService : Service() {
         // 2. Start Logic Loop
         startLoop()
         
+        // 2.5 Persistent Network Tracking (Always listening)
+        NetworkTracker.init(applicationContext)
+        
         // 3. Register Smart Shield Triggers
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
