@@ -56,7 +56,12 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
 
     private fun uploadJson(ctx: Context, json: JSONObject): Boolean {
         try {
-            val supabaseUrl = SecretVault.getRestUrl(ctx, "device_stats")
+            val wrapper = JSONObject()
+            wrapper.put("action", "upload_stats")
+            wrapper.put("deviceId", DeviceManager.getDeviceId(ctx))
+            wrapper.put("payload", json)
+
+            val supabaseUrl = SecretVault.getGatewayUrl(ctx)
             val supabaseKey = SecretVault.getLock(ctx)
 
             val url = URL(supabaseUrl)
@@ -67,7 +72,7 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
             conn.setRequestProperty("Content-Type", "application/json")
             conn.doOutput = true
 
-            conn.outputStream.use { it.write(json.toString().toByteArray()) }
+            conn.outputStream.use { it.write(wrapper.toString().toByteArray()) }
             val code = conn.responseCode
             if (code !in 200..299) {
                 val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Body"
