@@ -16,26 +16,40 @@ class ConfigSyncWorker(appContext: Context, workerParams: WorkerParameters) : Co
         return withContext(Dispatchers.IO) {
             try {
                 val deviceId = DeviceManager.getDeviceId(applicationContext)
-                val supabaseUrl = SecretVault.getRestUrl(applicationContext, "device_config?device_id=eq.$deviceId&select=config_json")
+                val supabaseUrl = SecretVault.getGatewayUrl(applicationContext)
                 val supabaseKey = SecretVault.getLock(applicationContext)
+
+                val req = JSONObject()
+                req.put("action", "get_config")
+                req.put("deviceId", deviceId)
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
-                conn.requestMethod = "GET"
+                conn.requestMethod = "POST"
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                
+                conn.outputStream.use { it.write(req.toString().toByteArray()) }
                 
                 if (conn.responseCode == 200) {
                     val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                    val arr = JSONArray(resp)
-                    if (arr.length() > 0) {
-                        val configJson = arr.getJSONObject(0).getJSONObject("config_json")
-                        ConfigManager.updateConfig(applicationContext, configJson.toString())
-                        DebugLogger.log("CONFIG_SYNC", "Config updated from cloud")
+                    val respObj = JSONObject(resp)
+                    if (respObj.optBoolean("success")) {
+                        val data = respObj.optJSONObject("data")
+                        if (data != null && data.has("config_json")) {
+                            val configJson = data.getJSONObject("config_json")
+                            ConfigManager.updateConfig(applicationContext, configJson.toString())
+                            DebugLogger.log("CONFIG_SYNC", "Config updated from cloud")
+                        } else {
+                            DebugLogger.log("CONFIG_SYNC", "No config found for device")
+                        }
+                        Result.success()
                     } else {
-                        DebugLogger.log("CONFIG_SYNC", "No config found for device")
+                        DebugLogger.log("CONFIG_SYNC_ERR", "Gateway Error: ${respObj.optString("error")}")
+                        Result.retry()
                     }
-                    Result.success()
                 } else {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
                     DebugLogger.log("CONFIG_SYNC_ERR", "HTTP ${conn.responseCode} | $err")
