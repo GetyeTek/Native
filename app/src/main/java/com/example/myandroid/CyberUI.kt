@@ -246,14 +246,14 @@ fun ProgressTank(pct: Float, gradient: List<Color>) {
 @Composable
 fun PermissionsCard(ctx: Context, permState: Map<String, Boolean>) {
     Column(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF2E1015), RoundedCornerShape(24.dp)).border(1.dp, Color(0x33EF4565), RoundedCornerShape(24.dp)).padding(20.dp)
+        modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B), RoundedCornerShape(24.dp)).border(1.dp, Color(0xFFFCD34D), RoundedCornerShape(24.dp)).padding(20.dp)
     ) {
-        Text("SYSTEM OVERRIDES REQUIRED", color = Color(0xFFEF4565), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-        if (!permState["acc"]!!) PermRow("Accessibility", "Neural Interface") { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        if (!permState["usage"]!!) PermRow("Usage Stats", "Analytics") { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
-        if (!permState["files"]!!) PermRow("All Files", "Deep Clean") { val i = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
-        if (!permState["notif"]!!) PermRow("Notifications", "Symbiote Link") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
-        if (!permState["batt"]!!) PermRow("Ignore Battery Opt", "Persistence") { val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
+        Text("Action Required", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+        if (!permState["acc"]!!) PermRow("Accessibility Service", "Background automation") { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        if (!permState["usage"]!!) PermRow("Usage Stats", "Screen time analytics") { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+        if (!permState["files"]!!) PermRow("Storage Access", "File system reports") { val i = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
+        if (!permState["notif"]!!) PermRow("Notification Access", "Message sync") { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+        if (!permState["batt"]!!) PermRow("Background Processing", "Unrestricted data sync") { val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS); i.data = Uri.parse("package:"+ctx.packageName); ctx.startActivity(i) }
     }
 }
 
@@ -264,7 +264,7 @@ fun PermRow(title: String, desc: String, onClick: () -> Unit) {
             Text(title, color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Text(desc, color = TextDim, fontSize = 12.sp)
         }
-        Text("ENABLE", color = Color(0xFFEF4565), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("ENABLE", color = Color(0xFFFCD34D), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
 
