@@ -391,40 +391,58 @@ fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
 fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
     val report = remember { DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LIVE LOGS ---\n" + DebugLogger.getLogs() }
     val scope = rememberCoroutineScope()
+    var isRevealed by remember { mutableStateOf(false) }
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0F0F10),
-        title = { Text("SYSTEM TERMINAL", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+        containerColor = CardSlate,
+        title = { 
+            Text(
+                "System Terminal", 
+                color = TextMain, 
+                fontWeight = FontWeight.SemiBold, 
+                fontSize = 18.sp,
+                modifier = Modifier.clickable { isRevealed = true }
+            ) 
+        },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(report, color = AccentGreen, fontSize = 11.sp, fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth().heightIn(min = 60.dp)) {
+                if (isRevealed) {
+                    Text(report, color = TextDim, fontSize = 11.sp, lineHeight = 16.sp)
+                }
             }
         },
         confirmButton = {
-            Row {
-                TextButton(onClick = {
-                    val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    val clip = android.content.ClipData.newPlainText("Cortex Logs", report)
-                    clipboard.setPrimaryClip(clip)
-                    android.widget.Toast.makeText(ctx, "Logs copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
-                }) { Text("COPY", color = AccentGreen) }
+            if (isRevealed) {
+                Row {
+                    TextButton(onClick = {
+                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("System Logs", report)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(ctx, "Logs copied", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Copy", color = AccentBlue) }
 
-                TextButton(onClick = {
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, report)
-                    }
-                    ctx.startActivity(Intent.createChooser(shareIntent, "Share Cortex Logs"))
-                }) { Text("SHARE", color = AccentPurple) }
+                    TextButton(onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, report)
+                        }
+                        ctx.startActivity(Intent.createChooser(shareIntent, "Share System Logs"))
+                    }) { Text("Share", color = AccentBlue) }
 
-                TextButton(onClick = onDismiss) { Text("CLOSE", color = Color.White) }
+                    TextButton(onClick = onDismiss) { Text("Close", color = TextMain) }
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Close", color = TextMain) }
             }
         },
         dismissButton = {
-            TextButton(onClick = { 
-                scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
-            }) { Text("FORCE DUMP", color = AccentBlue) }
+            if (isRevealed) {
+                TextButton(onClick = { 
+                    scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
+                    android.widget.Toast.makeText(ctx, "Export initiated", android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text("Export", color = TextDim) }
+            }
         }
     )
 }
