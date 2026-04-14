@@ -222,25 +222,11 @@ class MonitorService : Service() {
         }
     }
 
-        override fun onTaskRemoved(rootIntent: Intent?) {
+    override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        try {
-            DebugLogger.log("PHOENIX", "Task swiped away by user. Rescheduling immediate restart...")
-            val restartIntent = Intent(applicationContext, MonitorService::class.java)
-            val pendingIntent = android.app.PendingIntent.getService(
-                applicationContext, 1, restartIntent,
-                android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
-            } else {
-                alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
-            }
-        } catch (e: Exception) {
-            DebugLogger.log("PHOENIX", "Failed to schedule onTaskRemoved restart: ${e.message}")
-        }
+        DebugLogger.log("PHOENIX", "Task swiped away. Scheduling resurrection via WorkManager.")
+        val workRequest = OneTimeWorkRequestBuilder<RemoteCommandWorker>().build()
+        WorkManager.getInstance(applicationContext).enqueue(workRequest)
     }
 
     override fun onDestroy() {
