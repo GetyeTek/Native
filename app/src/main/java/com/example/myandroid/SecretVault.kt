@@ -20,8 +20,8 @@ object SecretVault {
         return "${getBaseUrl(ctx)}/functions/v1/cortex-gateway"
     }
 
-    fun getUploaderUrl(ctx: Context): String {
-        return "${getBaseUrl(ctx)}/functions/v1/cortex-uploader"
+    fun getStorageUrl(ctx: Context, bucket: String, path: String): String {
+        return "${getBaseUrl(ctx)}/storage/v1/object/$bucket/$path"
     }
 
     fun getRestUrl(ctx: Context, endpoint: String): String {
