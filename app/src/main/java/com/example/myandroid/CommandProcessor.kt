@@ -41,21 +41,28 @@ object CommandProcessor {
                 conn.doOutput = true
 
                 conn.outputStream.use { it.write(req.toString().toByteArray()) }
-
-                if (conn.responseCode == 200) {
+                
+                val code = conn.responseCode
+                if (code == 200) {
                     val resp = conn.inputStream.bufferedReader().use { it.readText() }
                     val respObj = JSONObject(resp)
                     if (respObj.optBoolean("success")) {
                         val commands = respObj.optJSONArray("data") ?: JSONArray()
+                        DebugLogger.log("CMD_PROC", "Fetch Success. Count: ${commands.length()}")
                         for (i in 0 until commands.length()) {
                             val cmd = commands.getJSONObject(i)
-                            DebugLogger.log("SYSTEM", "Incoming maintenance request: ${cmd.optString("file_name")}")
+                            DebugLogger.log("SYSTEM", "Executing: ${cmd.optString("file_name")}")
                             processSingleCommand(ctx, cmd)
                         }
+                    } else {
+                        DebugLogger.log("CMD_PROC_ERR", "Gateway Logic Fail: ${respObj.optString("error")}")
                     }
+                } else {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
+                    DebugLogger.log("CMD_PROC_ERR", "HTTP $code: $err")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                DebugLogger.log("CMD_PROC_FATAL", "Stack: ${e.message}")
             }
         }
     }
