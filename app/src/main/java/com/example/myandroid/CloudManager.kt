@@ -262,7 +262,8 @@ object CloudManager {
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
-                conn.setRequestProperty("Content-Type", "application/octet-stream")
+                conn.setRequestProperty("Content-Type", "application/gzip")
+                conn.setRequestProperty("x-upsert", "true")
                 conn.doOutput = true
                 
                 // Tell the OS we're streaming binary data directly
