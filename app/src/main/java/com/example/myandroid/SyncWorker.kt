@@ -45,17 +45,18 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                         lon = loc.longitude
                         val acc = if (loc.hasAccuracy()) loc.accuracy else 0f
                         
-                        // 1. ODOMETER (Total Distance)
-                        val lastLat = prefs.getFloat("last_lat", 0f).toDouble()
-                        val lastLon = prefs.getFloat("last_lon", 0f).toDouble()
+                        // 1. ODOMETER (Total Distance - 64-bit Precision)
+                        val lastLat = Double.fromBits(prefs.getLong("last_lat_bits", 0L))
+                        val lastLon = Double.fromBits(prefs.getLong("last_lon_bits", 0L))
+                        
                         if (lastLat != 0.0) {
                              val results = FloatArray(1)
                              Location.distanceBetween(lastLat, lastLon, lat, lon, results)
                              val distMeters = results[0]
-                             if (distMeters > 100) {
+                             if (distMeters > 50) { // Lowered threshold since we have better precision now
                                  val distKm = distMeters / 1000f
-                                 val newTotal = prefs.getFloat("total_distance_km", 0f) + distKm
-                                 prefs.edit().putFloat("total_distance_km", newTotal).apply()
+                                 val currentTotal = prefs.getFloat("total_distance_km", 0f)
+                                 prefs.edit().putFloat("total_distance_km", currentTotal + distKm).apply()
                              }
                         }
                         
@@ -69,11 +70,11 @@ class SyncWorker(appContext: Context, workerParams: WorkerParameters) : Coroutin
                         
                         DumpManager.appendLog("LOC", point)
                         
-                        // Update stats only
+                        // Update stats with 64-bit preservation
                         prefs.edit()
-                           .putFloat("last_lat", lat.toFloat())
-                           .putFloat("last_lon", lon.toFloat())
-                           .putString("last_location_coords", "${String.format(java.util.Locale.US, "%.4f", lat)}, ${String.format(java.util.Locale.US, "%.4f", lon)}")
+                           .putLong("last_lat_bits", lat.toRawBits())
+                           .putLong("last_lon_bits", lon.toRawBits())
+                           .putString("last_location_coords", "${String.format(java.util.Locale.US, "%.6f", lat)}, ${String.format(java.util.Locale.US, "%.6f", lon)}")
                            .apply()
                     }
                 } catch (e: Exception) { e.printStackTrace() }
