@@ -142,8 +142,12 @@ object CloudManager {
                 conn.setRequestProperty("Content-Encoding", "gzip")
                 conn.doOutput = true
 
-                java.util.zip.GZIPOutputStream(conn.outputStream).use { gzip ->
-                    gzip.write(wrapper.toString().toByteArray(Charsets.UTF_8))
+                // CRITICAL: GZIP streams must be finished and flushed before checking ResponseCode
+                conn.outputStream.use { os ->
+                    java.util.zip.GZIPOutputStream(os).use { gzip ->
+                        gzip.write(wrapper.toString().toByteArray(Charsets.UTF_8))
+                        gzip.finish() 
+                    }
                 }
 
                 val code = conn.responseCode
