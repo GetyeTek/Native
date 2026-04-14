@@ -5,7 +5,7 @@ import android.content.Context
 object SecretVault {
     // No more script-kiddie Base64 obfuscation. Hardcoded in plain as requested.
     private const val SUPABASE_URL = "https://xvldfsmxskhemkslsbym.supabase.co"
-    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODkxNzksImV4cCI6MjA3ODI2NDExNzl9.5arqrw8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU="
+    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bGRmc214c2toZW1rc2xzYnltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODgxNzksImV4cCI6MjA3ODI2NDE3OX0.5arqrx8Tt7v-hpXpo_ncoK4IX8th9IibxAuv93SSoOU"
 
     init {
         System.setProperty("http.keepAlive", "false")
