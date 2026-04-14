@@ -29,14 +29,15 @@ class MyFcmService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        DebugLogger.log("FCM", "Push received. Triggering Defibrillator & CommandProcessor.")
+        val data = remoteMessage.data
+        DebugLogger.log("FCM", "Push Recv. ID: ${remoteMessage.messageId} | Data: $data")
         
-        // 1. DEFIBRILLATOR: Check if the main monitor is dead and shock it
         ServiceResurrector.shock(applicationContext)
         KeepAliveReceiver.scheduleNext(applicationContext)
 
-        // 2. Wake up the processor to handle the actual command
         CoroutineScope(Dispatchers.IO).launch {
+            // Delay slightly to allow network to stabilize after wake-up
+            kotlinx.coroutines.delay(1000)
             CommandProcessor.checkAndExecute(applicationContext)
         }
     }
