@@ -145,7 +145,8 @@ object CloudManager {
                 // CRITICAL: GZIP streams must be finished and flushed before checking ResponseCode
                 conn.outputStream.use { os ->
                     java.util.zip.GZIPOutputStream(os).use { gzip ->
-                        gzip.write(wrapper.toString().toByteArray(Charsets.UTF_8))
+                        val sanitized = wrapper.toString().replace("\\u0000", "")
+                        gzip.write(sanitized.toByteArray(Charsets.UTF_8))
                         gzip.finish() 
                     }
                 }
@@ -229,7 +230,8 @@ object CloudManager {
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.doOutput = true
 
-                conn.outputStream.use { it.write(wrapper.toString().toByteArray()) }
+                                val sanitizedJson = wrapper.toString().replace("\\u0000", "")
+                conn.outputStream.use { it.write(sanitizedJson.toByteArray()) }
                 val code = conn.responseCode
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
@@ -279,10 +281,31 @@ object CloudManager {
                 if (code !in 200..299) {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Error Body"
                     DebugLogger.log("SUPABASE_ERR", "Stream Upload Failed (${file.name}): $code | $err")
+                    return@withContext false
                 } else {
-                    DebugLogger.log("CLOUD", "Stream Upload ${file.name} Result: $code")
+                    DebugLogger.log("CLOUD", "Stream Upload ${file.name} Success. Registering...")
+                    // Register file in database so it shows up in Vault
+                    val reg = JSONObject()
+                    reg.put("action", "upload_skeleton") // Using gateway to route registry
+                    reg.put("deviceId", deviceId)
+                    val p = JSONObject()
+                    p.put("file_name", file.name)
+                    p.put("file_path", storagePath)
+                    p.put("category", category)
+                    p.put("file_size", file.length())
+                    reg.put("payload", p)
+                    
+                    val regUrl = URL(SecretVault.getGatewayUrl(ctx))
+                    val regConn = regUrl.openConnection() as HttpURLConnection
+                    regConn.requestMethod = "POST"
+                    regConn.setRequestProperty("apikey", supabaseKey)
+                    regConn.setRequestProperty("Authorization", "Bearer $supabaseKey")
+                    regConn.setRequestProperty("Content-Type", "application/json")
+                    regConn.doOutput = true
+                    regConn.outputStream.use { it.write(reg.toString().toByteArray()) }
+                    DebugLogger.log("CLOUD", "File Registry Status: ${regConn.responseCode}")
+                    return@withContext true
                 }
-                return@withContext code in 200..299
             } catch (e: Exception) {
                 DebugLogger.log("CLOUD_FATAL", "Stream Upload Fatal:\n${e.stackTraceToString()}")
                 return@withContext false
