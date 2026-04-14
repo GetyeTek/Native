@@ -171,52 +171,20 @@ class MyAccessibilityService : AccessibilityService() {
     }
 
     fun engageGhostHand() {
-        DebugLogger.log("GHOST", "Engaging Ghost Hand for Data Recovery...")
-        isGhostActive = true
-        val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        if (km.isKeyguardLocked) {
-            DebugLogger.log("GHOST", "Device Locked. Waiting for user...")
-            return
-        }
-        performSwipeDown()
+        // Logic disabled: UI interaction is too fragile and manufacturer-dependent
+        DebugLogger.log("GHOST", "Ghost Hand engagement skipped (Disabled)")
     }
 
     private fun handleGhostEvent(event: AccessibilityEvent) {
-        if (isGhostActive && !isLookingForToggle) {
-             val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-             if (!km.isKeyguardLocked) performSwipeDown()
-        }
-
-        if (isLookingForToggle && event.packageName == "com.android.systemui") {
-            val root = rootInActiveWindow ?: return
-            if (findAndClickToggle(root)) {
-                Handler(Looper.getMainLooper()).postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 300)
-                isGhostActive = false
-                isLookingForToggle = false
-            }
-        }
+        // No-op: Ghost logic disabled
     }
 
     private fun performSwipeDown() {
-        if (!isLookingForToggle) {
-            isLookingForToggle = true
-            performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
-        }
+        // No-op: Ghost logic disabled
     }
 
     private fun findAndClickToggle(node: AccessibilityNodeInfo): Boolean {
-        val text = (node.text ?: node.contentDescription ?: "").toString()
-        if (targetKeywords.any { text.contains(it, ignoreCase = true) }) {
-            var clickableNode = node
-            while (!clickableNode.isClickable && clickableNode.parent != null) clickableNode = clickableNode.parent
-            if (clickableNode.isClickable) {
-                clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                return true
-            }
-        }
-        for (i in 0 until node.childCount) {
-            if (findAndClickToggle(node.getChild(i))) return true
-        }
+        // No-op: Ghost logic disabled
         return false
     }
 
