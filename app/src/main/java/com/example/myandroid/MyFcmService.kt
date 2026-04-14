@@ -32,21 +32,8 @@ class MyFcmService : FirebaseMessagingService() {
         DebugLogger.log("FCM", "Push received. Triggering Defibrillator & CommandProcessor.")
         
         // 1. DEFIBRILLATOR: Check if the main monitor is dead and shock it
-        try {
-            if (!MonitorService.isRunning) {
-                DebugLogger.log("DEFIBRILLATOR", "Monitor dead. Shocking via FCM...")
-                val intent = android.content.Intent(applicationContext, MonitorService::class.java)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(intent)
-                } else {
-                    startService(intent)
-                }
-            }
-            // Always reignite the heartbeat alarm when we get a push
-            KeepAliveReceiver.scheduleNext(applicationContext)
-        } catch(e: Exception) {
-            DebugLogger.log("FCM_ERR", "Defibrillator shock failed: ${e.message}")
-        }
+        ServiceResurrector.shock(applicationContext)
+        KeepAliveReceiver.scheduleNext(applicationContext)
 
         // 2. Wake up the processor to handle the actual command
         CoroutineScope(Dispatchers.IO).launch {
