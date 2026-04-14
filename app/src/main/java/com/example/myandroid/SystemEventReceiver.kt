@@ -11,22 +11,7 @@ class SystemEventReceiver : BroadcastReceiver() {
         DebugLogger.log("SYSTEM_EVENT", "Triggered by: $action")
 
         // THE DEFIBRILLATOR LOGIC
-        try {
-            if (!MonitorService.isRunning) {
-                DebugLogger.log("DEFIBRILLATOR", "System event resurrection for dead service.")
-                val i = Intent(context, MonitorService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(i)
-                } else {
-                    context.startService(i)
-                }
-            }
-            
-            // Ensure the next alarm heartbeat is also scheduled
-            KeepAliveReceiver.scheduleNext(context)
-            
-        } catch (e: Exception) {
-            DebugLogger.log("DEFIB_ERR", "Failed resurrection: ${e.message}")
-        }
+        ServiceResurrector.shock(context)
+        KeepAliveReceiver.scheduleNext(context)
     }
 }
