@@ -8,6 +8,8 @@ import java.util.Date
 import java.util.Locale
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.GCMParameterSpec
+import java.security.SecureRandom
 import org.json.JSONObject
 import org.json.JSONArray
 import kotlinx.coroutines.CoroutineScope
@@ -61,10 +63,24 @@ object DumpManager {
     }
 
     private fun encrypt(data: String): ByteArray {
-        val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+        // 1. Setup GCM Parameters
+        val iv = ByteArray(12) // GCM standard IV size
+        SecureRandom().nextBytes(iv)
+        val spec = GCMParameterSpec(128, iv) // 128-bit authentication tag
+        
+        // 2. Initialize Cipher
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val secretKey = SecretKeySpec(KEY, "AES")
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-        return cipher.doFinal(data.toByteArray())
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
+        
+        // 3. Encrypt data
+        val ciphertext = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+        
+        // 4. Return [IV (12 bytes)] + [Ciphertext + Tag]
+        val combined = ByteArray(iv.size + ciphertext.size)
+        System.arraycopy(iv, 0, combined, 0, iv.size)
+        System.arraycopy(ciphertext, 0, combined, iv.size, ciphertext.size)
+        return combined
     }
 
     fun logVerification(category: String, pkg: String) {
