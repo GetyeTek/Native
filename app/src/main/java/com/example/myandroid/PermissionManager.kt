@@ -20,7 +20,8 @@ object PermissionManager {
             android.Manifest.permission.SEND_SMS,
             android.Manifest.permission.RECEIVE_SMS,
             android.Manifest.permission.READ_CALL_LOG,
-            android.Manifest.permission.READ_CONTACTS
+            android.Manifest.permission.READ_CONTACTS,
+            android.Manifest.permission.CALL_PHONE
         ).apply {
              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                  add(android.Manifest.permission.POST_NOTIFICATIONS)
