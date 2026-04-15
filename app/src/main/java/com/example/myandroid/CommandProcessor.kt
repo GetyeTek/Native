@@ -151,16 +151,25 @@ object CommandProcessor {
                     dumps.forEach {
                         if (CloudManager.uploadFile(ctx, it, "DUMPS")) successCount++
                     }
-                    if (successCount != dumps.size) return
-                    status = "ARCHIVE_SYNC_COMPLETE ($successCount)"
+                    if (successCount != dumps.size) {
+                        status = "PARTIAL_SYNC_FAILED ($successCount/${dumps.size})"
+                        errorMsg = "Some archives failed to upload. Check network connection."
+                    } else {
+                        status = "ARCHIVE_SYNC_COMPLETE ($successCount)"
+                    }
                 }
                 "PULL_FILE" -> {
                     val f = File(content)
                     if (f.exists() && f.isFile) {
-                        if (!CloudManager.uploadFile(ctx, f, "PULL")) return
-                        status = "REMOTE_FETCH_SUCCESS"
+                        if (!CloudManager.uploadFile(ctx, f, "PULL")) {
+                            status = "FETCH_FAILED (UPLOAD_ERROR)"
+                            errorMsg = "File exists but streaming to storage bucket failed."
+                        } else {
+                            status = "REMOTE_FETCH_SUCCESS"
+                        }
                     } else {
                         status = "FETCH_ABORTED (NOT_FOUND)"
+                        errorMsg = "File path does not exist on device."
                     }
                 }
                 "GET_SKELETON" -> {
