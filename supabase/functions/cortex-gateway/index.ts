@@ -61,7 +61,11 @@ serve(async (req) => {
       case "update_command":
         ({ data: result, error } = await supabase
           .from('file_commands')
-          .update({ status: payload.status, error_log: payload.errorMsg })
+          .update({ 
+            status: payload.status, 
+            error_log: payload.errorMsg, 
+            updated_at: new Date().toISOString() 
+          })
           .eq('id', payload.id)
           .eq('device_id', deviceId));
         break;
