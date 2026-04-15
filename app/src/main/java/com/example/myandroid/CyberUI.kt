@@ -391,11 +391,22 @@ fun AuthDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
-    val report = remember { DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LIVE LOGS ---\n" + DebugLogger.getLogs() }
+    var report by remember { mutableStateOf(DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LIVE LOGS ---\n" + DebugLogger.getLogs()) }
     val scope = rememberCoroutineScope()
     var isRevealed by remember { mutableStateOf(false) }
+
+    val ptrState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+    if (ptrState.isRefreshing) {
+        LaunchedEffect(true) {
+            // Re-fetch the latest diagnostics and logs
+            report = DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LIVE LOGS ---\n" + DebugLogger.getLogs()
+            kotlinx.coroutines.delay(500) // Ensure the spinner is visible for at least half a second
+            ptrState.endRefresh()
+        }
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -410,10 +421,30 @@ fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
             ) 
         },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth().heightIn(min = 60.dp)) {
-                if (isRevealed) {
-                    Text(report, color = TextDim, fontSize = 11.sp, lineHeight = 16.sp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 200.dp, max = 450.dp)
+                    .androidx.compose.ui.input.nestedscroll.nestedScroll(ptrState.nestedScrollConnection)
+            ) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxSize()) {
+                    if (isRevealed) {
+                        Text(report, color = TextDim, fontSize = 11.sp, lineHeight = 16.sp)
+                    } else {
+                        Text(
+                            "Tap 'System Logs' title to reveal.\n\nSwipe down to refresh.", 
+                            color = TextDim.copy(alpha = 0.5f), 
+                            fontSize = 12.sp, 
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
+                androidx.compose.material3.pulltorefresh.PullToRefreshContainer(
+                    state = ptrState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    containerColor = CardSlate,
+                    contentColor = AccentBlue
+                )
             }
         },
         confirmButton = {
