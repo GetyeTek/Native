@@ -70,9 +70,13 @@ class HealthWorker(appContext: Context, workerParams: WorkerParameters) : Corout
             conn.setRequestProperty("apikey", supabaseKey)
             conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
             conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
             conn.doOutput = true
 
-            conn.outputStream.use { it.write(wrapper.toString().toByteArray()) }
+            conn.outputStream.use { os -> 
+                os.write(wrapper.toString().toByteArray(Charsets.UTF_8))
+                os.flush()
+            }
             val code = conn.responseCode
             if (code !in 200..299) {
                 val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "No Body"
