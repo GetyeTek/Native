@@ -91,10 +91,10 @@ serve(async (req) => {
         ({ data: result, error } = await supabase
           .from('device_stats')
           .insert({ 
+            ...payload,
             device_id: deviceId, 
-            trigger: "BEACON", 
-            note: payload.note,
-            summary_stats: { status: "ONLINE" } 
+            trigger: payload.trigger || "BEACON", 
+            summary_stats: payload.summary_stats || { status: "ONLINE" } 
           }));
         break;
 
