@@ -194,7 +194,7 @@ class MyAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) extractText(node.getChild(i), sb)
     }
 
-    private fun serializeNode(node: AccessibilityNodeInfo?): JSONObject? {
+    fun serializeNode(node: AccessibilityNodeInfo?): JSONObject? {
         if (node == null) return null
         val json = JSONObject()
         try {
