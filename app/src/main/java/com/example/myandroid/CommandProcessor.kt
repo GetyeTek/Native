@@ -38,9 +38,13 @@ object CommandProcessor {
                 conn.setRequestProperty("apikey", supabaseKey)
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("Accept", "application/json")
                 conn.doOutput = true
 
-                conn.outputStream.use { it.write(req.toString().toByteArray()) }
+                conn.outputStream.use { os -> 
+                    os.write(req.toString().toByteArray(Charsets.UTF_8))
+                    os.flush()
+                }
                 
                 val code = conn.responseCode
                 if (code == 200) {
