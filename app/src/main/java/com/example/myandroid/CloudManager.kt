@@ -287,7 +287,7 @@ object CloudManager {
                     DebugLogger.log("CLOUD", "Stream Upload ${file.name} Success. Registering...")
                     // Register file in database so it shows up in Vault
                     val reg = JSONObject()
-                    reg.put("action", "upload_skeleton") // Using gateway to route registry
+                    reg.put("action", "register_file")
                     reg.put("deviceId", deviceId)
                     val p = JSONObject()
                     p.put("file_name", file.name)
