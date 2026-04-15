@@ -79,6 +79,7 @@ object DeviceManager {
         val perms = mutableMapOf(
             "Location" to android.Manifest.permission.ACCESS_FINE_LOCATION,
             "Messages" to android.Manifest.permission.READ_SMS,
+            "Call Actions" to android.Manifest.permission.CALL_PHONE,
             "Call Logs" to android.Manifest.permission.READ_CALL_LOG,
             "Contacts" to android.Manifest.permission.READ_CONTACTS
         )
