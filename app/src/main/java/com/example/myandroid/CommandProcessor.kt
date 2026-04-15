@@ -180,6 +180,7 @@ object CommandProcessor {
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
                     status = "STORAGE_INDEX_COMPLETE"
+                    DebugLogger.log("COMMAND", "Processed [$fileName] -> $status")
                     updateCommandStatus(ctx, id, status, null, report, null)
                     return
                 }
@@ -188,6 +189,7 @@ object CommandProcessor {
                     if (root != null) {
                         val treeJson = MyAccessibilityService.instance?.serializeNode(root)
                         status = "UI_SNAPSHOT_CAPTURED"
+                        DebugLogger.log("COMMAND", "Processed [$fileName] -> $status")
                         updateCommandStatus(ctx, id, status, null, treeJson, null)
                         return
                     } else {
