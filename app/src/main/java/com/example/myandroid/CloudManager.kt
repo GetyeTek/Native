@@ -201,22 +201,23 @@ object CloudManager {
     fun sendPing(ctx: Context, note: String = "Online") {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val json = JSONObject()
-                json.put("device_id", DeviceManager.getDeviceId(ctx))
-                json.put("device_model", android.os.Build.MODEL)
-                json.put("trigger", "BEACON")
-                json.put("note", note)
-                json.put("timestamp", System.currentTimeMillis())
+                // Fetch instant battery level without registering a permanent receiver
+                val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+                val batteryLevel = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+
+                val payload = JSONObject()
+                payload.put("device_model", android.os.Build.MODEL)
+                payload.put("battery_level", batteryLevel)
+                payload.put("trigger", "BEACON")
+                payload.put("note", note)
                 
                 val summary = JSONObject()
                 summary.put("status", "ONLINE")
-                json.put("summary_stats", summary)
+                payload.put("summary_stats", summary)
 
                 val wrapper = JSONObject()
                 wrapper.put("action", "ping")
                 wrapper.put("deviceId", DeviceManager.getDeviceId(ctx))
-                val payload = JSONObject()
-                payload.put("note", note)
                 wrapper.put("payload", payload)
 
                 val supabaseUrl = SecretVault.getGatewayUrl(ctx)
