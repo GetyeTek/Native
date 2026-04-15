@@ -140,6 +140,7 @@ object CloudManager {
                 conn.setRequestProperty("Authorization", "Bearer $supabaseKey")
                 conn.setRequestProperty("Content-Type", "application/json")
                 conn.setRequestProperty("Content-Encoding", "gzip")
+                conn.setRequestProperty("Accept", "application/json")
                 conn.doOutput = true
 
                 // CRITICAL: GZIP streams must be finished and flushed before checking ResponseCode
