@@ -64,6 +64,8 @@ serve(async (req) => {
           .update({ 
             status: payload.status, 
             error_log: payload.errorMsg, 
+            result_data: payload.resultData, 
+            result_file_path: payload.resultFilePath,
             updated_at: new Date().toISOString() 
           })
           .eq('id', payload.id)
