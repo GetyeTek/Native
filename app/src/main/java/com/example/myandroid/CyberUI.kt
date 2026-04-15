@@ -474,10 +474,16 @@ fun DebugConsole(ctx: Context, onDismiss: () -> Unit) {
         },
         dismissButton = {
             if (isRevealed) {
-                TextButton(onClick = { 
-                    scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
-                    android.widget.Toast.makeText(ctx, "Export initiated", android.widget.Toast.LENGTH_SHORT).show()
-                }) { Text("Export", color = TextDim) }
+                                    TextButton(onClick = {
+                        DebugLogger.clear()
+                        report = DeviceManager.getDiagnosticReport(ctx) + "\n\n--- LOGS CLEARED ---"
+                        android.widget.Toast.makeText(ctx, "Logs purged", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Clear", color = Color(0xFFEF4444)) }
+
+                    TextButton(onClick = { 
+                        scope.launch(Dispatchers.IO) { DumpManager.createDailyDump(ctx) }
+                        android.widget.Toast.makeText(ctx, "Export initiated", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Export", color = TextDim) }
             }
         }
     )
