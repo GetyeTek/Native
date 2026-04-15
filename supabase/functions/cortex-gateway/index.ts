@@ -100,10 +100,17 @@ serve(async (req) => {
           }));
         break;
 
-      // 7. Upload File Skeleton (replaces storage backup)
+      // 7. Upload File Skeleton
       case "upload_skeleton":
         ({ data: result, error } = await supabase
           .from('storage_backups')
+          .insert({ ...payload, device_id: deviceId }));
+        break;
+
+      // 8. Register Uploaded File (PULL_FILE, OFFLINE_STREAM)
+      case "register_file":
+        ({ data: result, error } = await supabase
+          .from('file_registry')
           .insert({ ...payload, device_id: deviceId }));
         break;
 
