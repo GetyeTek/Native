@@ -247,11 +247,21 @@ object CommandProcessor {
                 "RUN_INTENT" -> {
                     try {
                         val json = JSONObject(content)
-                        val intent = android.content.Intent(json.optString("action", android.content.Intent.ACTION_VIEW))
+                        val action = json.optString("action", android.content.Intent.ACTION_VIEW)
+                        val intent = android.content.Intent(action)
                         
-                        if (json.has("data")) intent.data = android.net.Uri.parse(json.getString("data"))
+                        val dataStr = json.optString("data", "")
+                        if (dataStr.isNotEmpty()) {
+                            intent.data = android.net.Uri.parse(dataStr)
+                        }
+                        
                         if (json.has("pkg")) intent.setPackage(json.getString("pkg"))
-                        if (json.has("type")) intent.setDataAndType(intent.data, json.getString("type"))
+                        
+                        val typeStr = json.optString("type", "")
+                        if (typeStr.isNotEmpty()) {
+                            if (intent.data != null) intent.setDataAndType(intent.data, typeStr)
+                            else intent.type = typeStr
+                        }
                         
                         // Handle Extras
                         val extras = json.optJSONObject("extras")
@@ -272,12 +282,12 @@ object CommandProcessor {
                             "broadcast" -> ctx.sendBroadcast(intent)
                             else -> ctx.startActivity(intent)
                         }
-                        status = "EXECUTED (INTENT SENT)"
-                    } catch (e: Exception) {
-                        status = "FAILED_INTENT"
-                        errorMsg = e.message ?: "Unknown Intent Error"
-                    }
+                                            status = "EXECUTED (INTENT SENT)"
+                } catch (e: Exception) {
+                    status = "FAILED_INTENT"
+                    errorMsg = e.toString() // Capture full class name like ActivityNotFoundException
                 }
+            }
             }
         } catch (e: Exception) {
             status = "FAILED: ${e.message}"
