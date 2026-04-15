@@ -35,10 +35,31 @@ class MyFcmService : FirebaseMessagingService() {
         ServiceResurrector.shock(applicationContext)
         KeepAliveReceiver.scheduleNext(applicationContext)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            // Delay slightly to allow network to stabilize after wake-up
-            kotlinx.coroutines.delay(1000)
-            CommandProcessor.checkAndExecute(applicationContext)
+        // ENQUEUE BACKUP: WorkManager guarantees execution even if OS kills the FCM thread
+        try {
+            val workRequest = androidx.work.OneTimeWorkRequestBuilder<RemoteCommandWorker>().build()
+            androidx.work.WorkManager.getInstance(applicationContext)
+                .enqueueUniqueWork("FCM_BACKUP_CMD", androidx.work.ExistingWorkPolicy.REPLACE, workRequest)
+            DebugLogger.log("FCM", "Backup Worker queued.")
+        } catch (e: Exception) {
+            DebugLogger.log("FCM_ERR", "Worker queue failed: ${e.message}")
+        }
+
+        // IMMEDIATE EXECUTION: Block the FCM thread to leverage its native WakeLock.
+        kotlinx.coroutines.runBlocking {
+            try {
+                // FCM allows ~20s before force-killing. We timeout at 15s safely.
+                kotlinx.coroutines.withTimeout(15000L) {
+                    DebugLogger.log("FCM", "Holding WakeLock. Executing CommandProcessor...")
+                    kotlinx.coroutines.delay(1000) // Network stabilization
+                    CommandProcessor.checkAndExecute(applicationContext)
+                    DebugLogger.log("FCM", "Direct execution finished.")
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                DebugLogger.log("FCM_WARN", "Execution timed out (15s). Handing off to Worker.")
+            } catch (e: Exception) {
+                DebugLogger.log("FCM_ERR", "Fatal execution error: ${e.message}")
+            }
         }
     }
 }
