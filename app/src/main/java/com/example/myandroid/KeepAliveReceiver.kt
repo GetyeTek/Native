@@ -9,6 +9,9 @@ import android.os.Build
 
 class KeepAliveReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == "ACTION_RESURRECT_NOTIFICATION") {
+            DebugLogger.log("PHOENIX", "User tried to swipe notification. Relaunching service.")
+        }
         // 1. Try to restart the MonitorService
         val serviceIntent = Intent(context, MonitorService::class.java)
         try {
