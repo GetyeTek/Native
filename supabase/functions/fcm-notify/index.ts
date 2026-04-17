@@ -59,8 +59,15 @@ serve(async (req) => {
         body: JSON.stringify({
           message: {
             token: token,
-            data: { trigger: "new_command", cmd_id: String(record.id) },
-            android: { priority: "high" }
+            data: {
+              trigger: "new_command",
+              cmd_id: String(record.id),
+              sent_at: new Date().toISOString()
+            },
+            android: {
+              priority: "high",
+              ttl: "0s"
+            }
           },
         }),
       }
