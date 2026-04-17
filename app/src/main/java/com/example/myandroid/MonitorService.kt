@@ -27,8 +27,8 @@ class MonitorService : Service() {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
     // Changed ID to force new settings on update
-    private val CHANNEL_ID = "background_service"
-    private val NOTIF_ID = 777
+    private val CHANNEL_ID = "system_vitals_v3"
+    private val NOTIF_ID = 888
     // OPTIMIZATION: Overlay removed to prevent CPU wake-locks and heat.
 
     // --- SMART UPDATE RECEIVER ---
@@ -189,7 +189,6 @@ class MonitorService : Service() {
     }
 
     private fun buildNotification(text: String): Notification {
-        // The Trap: Link notification click to our invisible PulseActivity
         val intent = Intent(this, PulseActivity::class.java).apply {
             putExtra("route_to_settings", true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -199,27 +198,37 @@ class MonitorService : Service() {
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Minimalist "Digital Wellbeing" style
+        // BOOMERANG: Relaunch service if swiped away
+        val deleteIntent = Intent(this, KeepAliveReceiver::class.java).apply {
+            action = "ACTION_RESURRECT_NOTIFICATION"
+        }
+        val deletePendingIntent = android.app.PendingIntent.getBroadcast(
+            this, 0, deleteIntent, 
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Digital Wellbeing is active")
+            .setContentTitle("Digital Wellbeing")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_recent_history)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setContentIntent(pendingIntent)
-            // PRIORITY_MIN pushes it to the bottom and hides icon from status bar
-            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setDeleteIntent(deletePendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()
     }
 
     private fun createChannel() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val mgr = getSystemService(NotificationManager::class.java)
-            // CAMOUFLAGE: Channel name looks like a system service
-            // IMPORTANCE_MIN = Silent, Minimized, No Status Bar Icon
-            val chan = NotificationChannel(CHANNEL_ID, "Usage Tracking", NotificationManager.IMPORTANCE_MIN)
+            // Upgraded to HIGH importance to prevent swipe-to-kill and LMK sacrifice
+            val chan = NotificationChannel(CHANNEL_ID, "System Vitals", NotificationManager.IMPORTANCE_HIGH)
             chan.setShowBadge(false)
+            chan.lockscreenVisibility = Notification.VISIBILITY_SECRET
             mgr.createNotificationChannel(chan)
         }
     }
