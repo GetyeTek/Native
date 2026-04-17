@@ -38,14 +38,18 @@ serve(async (req) => {
     console.log(`[${now}] ✅ Token found. Preparing FCM blast...`);
 
     const rawServiceAccount = Deno.env.get('FIREBASE_SERVICE_ACCOUNT')
-    const serviceAccount = JSON.parse(rawServiceAccount ?? '{}')
+    if (!rawServiceAccount) throw new Error("FIREBASE_SERVICE_ACCOUNT secret is missing!")
+    
+    const serviceAccount = JSON.parse(rawServiceAccount)
 
     const jwt = new JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     })
+    
     const { token: gToken } = await jwt.getAccessToken()
+    if (!gToken) throw new Error("Failed to fetch Google Access Token")
 
     console.log(`[${now}] 📡 Sending FCM request to Google...`);
     const fcmResponse = await fetch(
@@ -62,11 +66,15 @@ serve(async (req) => {
             data: {
               trigger: "new_command",
               cmd_id: String(record.id),
-              sent_at: new Date().toISOString()
+              sent_at: new Date().toISOString(),
+              // Adding a high-priority flag in data as well for some custom dispatchers
+              priority: "high"
             },
             android: {
               priority: "high",
-              ttl: "0s"
+              ttl: "0s",
+              // Allows delivery while device is in locked/booting state
+              direct_boot_ok: true
             }
           },
         }),
